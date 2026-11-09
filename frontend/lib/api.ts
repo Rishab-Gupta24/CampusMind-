@@ -56,6 +56,7 @@ export interface SourceRef {
 }
 
 export interface AskHandlers {
+  onQuiz?: (topic: string) => void;
   onToken: (text: string) => void;
   onSources: (sources: SourceRef[]) => void;
   onNotFound: (message: string) => void;
@@ -130,6 +131,34 @@ export interface Health {
   chunks: number;
 }
 
+export interface StudySource extends SourceRef {
+  label: string;
+  where: string;
+  past_paper: boolean;
+}
+
+export type QuizQuestion =
+  | { type: "mcq"; question: string; options: string[]; answer: number; explanation: string; answer_available: boolean; source: StudySource }
+  | { type: "fill" | "short"; question: string; answer: string; explanation: string; answer_available: boolean; source: StudySource };
+
+export type QuizSources = "all" | "past_papers" | "notes";
+
+export interface QuizRequest {
+  topic: string;
+  count: number;
+  sources: QuizSources;
+  course_id?: string | null;
+  section_id?: string | null;
+  lecture_id?: string | null;
+  exclude?: string[];
+}
+
+export interface Flashcard {
+  front: string;
+  back: string;
+  source: StudySource;
+}
+
 export class ApiError extends Error {}
 
 // ---------- HTTP helpers ----------
@@ -164,6 +193,9 @@ function query(params: Record<string, string | null | undefined>): string {
 function dispatch(name: string, payload: string, h: AskHandlers): void {
   const data = payload ? (JSON.parse(payload) as Record<string, unknown>) : {};
   switch (name) {
+    case "quiz":
+      h.onQuiz?.(String(data.topic ?? ""));
+      break;
     case "token":
       h.onToken(String(data.text ?? ""));
       break;
@@ -276,4 +308,8 @@ export const api = {
 
   flagged: (courseId?: string | null) => request<FlaggedMoment[]>(`/api/flagged${query({ course_id: courseId })}`),
   insights: () => request<Insights>("/api/insights"),
+
+  quiz: (req: QuizRequest) => request<{ topic: string; questions: QuizQuestion[] }>("/api/quiz", json(req)),
+  flashcards: (req: { topic: string; count: number; course_id?: string | null; section_id?: string | null; lecture_id?: string | null }) =>
+    request<{ topic: string; cards: Flashcard[] }>("/api/flashcards", json(req)),
 };

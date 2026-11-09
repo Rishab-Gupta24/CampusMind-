@@ -121,7 +121,15 @@ function Lecture() {
         </div>
       ) : (
         <>
-          <div className="mt-6">
+          <div className="mt-4">
+            <Link
+              href={`/practice?lecture=${lecture.id}&topic=${encodeURIComponent(lecture.title)}`}
+              className="inline-flex h-10 items-center rounded-chip bg-surface-2 px-4 text-[15px] text-text hover:bg-border/60"
+            >
+              Practice this lecture
+            </Link>
+          </div>
+          <div className="mt-5">
             <Tabs label="Lecture sections" tabs={tabs} value={tab} onChange={setTab} />
           </div>
           <div className="mt-5">

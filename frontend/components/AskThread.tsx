@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AnswerText } from "@/components/AnswerText";
@@ -10,7 +11,7 @@ import { SourcePanel } from "@/components/SourcePanel";
 import { LoadingDots, Segmented } from "@/components/ui";
 import { ask, type Scope, type SourceRef } from "@/lib/api";
 
-type TurnStatus = "waiting" | "streaming" | "done" | "not_found" | "error" | "stopped";
+type TurnStatus = "waiting" | "streaming" | "done" | "not_found" | "error" | "stopped" | "quiz";
 
 interface Turn {
   id: number;
@@ -42,12 +43,14 @@ export function AskThread({
   lectureId,
   title,
   examples = [],
+  initialQuestion,
 }: {
   courseId: string | null;
   sectionId: string | null;
   lectureId?: string;
   title?: string;
   examples?: string[];
+  initialQuestion?: string;
 }) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState("");
@@ -88,6 +91,7 @@ export function AskThread({
           lecture_id: lectureId ?? null,
         },
         {
+          onQuiz: (topic) => update(id, { status: "quiz", message: topic }),
           onToken: (text) => update(id, (t) => ({ answer: t.answer + text, status: "streaming" })),
           onSources: (sources) => update(id, { sources }),
           onNotFound: (message) => update(id, { status: "not_found", message, answer: "" }),
@@ -103,6 +107,13 @@ export function AskThread({
   );
 
   const stop = () => abortRef.current?.abort();
+
+  const asked = useRef(false);
+  useEffect(() => {
+    if (!initialQuestion || asked.current) return;
+    asked.current = true;
+    queueMicrotask(() => send(initialQuestion));
+  }, [initialQuestion, send]);
   const empty = turns.length === 0;
 
   return (
@@ -155,6 +166,20 @@ export function AskThread({
                   </div>
                 ) : null}
                 {t.status === "error" ? <p className="text-[17px] text-danger">{t.message}</p> : null}
+                {t.status === "quiz" ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-[17px]">
+                      That sounds like practice. Make a quiz on <span className="font-semibold">{t.message}</span>, with
+                      questions from your notes and past papers.
+                    </p>
+                    <Link
+                      href={`/practice?topic=${encodeURIComponent(t.message)}`}
+                      className="flex h-10 items-center rounded-chip bg-accent px-4 text-[15px] font-semibold text-white hover:bg-accent/90"
+                    >
+                      Start quiz
+                    </Link>
+                  </div>
+                ) : null}
                 {t.answer && t.status !== "not_found" ? (
                   <div className="text-[17px] leading-relaxed">
                     <AnswerText text={shown.text} sources={shown.sources} onCite={setOpen} />
