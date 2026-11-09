@@ -76,7 +76,8 @@ def get_document(source_id: uuid.UUID) -> dict[str, object]:
     row = db.get_source(str(source_id))
     if row is None or row["type"] != "pdf":
         raise HTTPException(status_code=404, detail="Document not found.")
-    return _document_out(row)
+    url = db.signed_url(row["storage_path"]) if row["storage_path"] and row["status"] == "ready" else None
+    return {**_document_out(row), "file_url": url}
 
 
 @router.delete("/api/documents/{source_id}")

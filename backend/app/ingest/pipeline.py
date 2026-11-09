@@ -62,7 +62,7 @@ def _fail(source_id: str, exc: Exception) -> None:
     safe = isinstance(exc, PrepareError | EmbedError)
     if not safe:
         log.exception("Pipeline failed for source %s", source_id)
-    db.update_source(source_id, {"status": "failed", "error": str(exc) if safe else GENERIC_FAILURE})
+    db.update_source(source_id, {"status": "failed", "stage": None, "error": str(exc) if safe else GENERIC_FAILURE})
 
 
 def process_document(source_id: str, upload_path: Path) -> None:
@@ -92,12 +92,15 @@ def process_document(source_id: str, upload_path: Path) -> None:
 
 def _lecture_intelligence(source_id: str, title: str, segments: list[Segment], duration: float) -> None:
     """Chunk → flag (cue + LLM) → embed → notes. Notes are best effort; flags and chunks are not."""
+    db.update_source(source_id, {"stage": "flagging"})
     transcript = [{"start_s": s["start"], "end_s": s["end"], "text": s["text"]} for s in segments]
     db.upload_json(transcript_storage_path(source_id), transcript)
     chunks = chunk_lecture(source_id, segments)
     moments = asyncio.run(flagger.detect(title, segments))
     reasons = flagger.apply_to_chunks(chunks, moments)
+    db.update_source(source_id, {"stage": "indexing"})
     _index(source_id, chunks, reasons)
+    db.update_source(source_id, {"stage": "notes"})
 
     notes: dict[str, object] = {"summary": "", "key_points": [], "formulas": []}
     try:
@@ -109,6 +112,7 @@ def _lecture_intelligence(source_id: str, title: str, segments: list[Segment], d
         source_id,
         {
             "status": "ready",
+            "stage": None,
             "error": None,
             "duration_s": round(duration, 1),
             "storage_path": audio_storage_path(source_id),
@@ -119,8 +123,10 @@ def _lecture_intelligence(source_id: str, title: str, segments: list[Segment], d
 def process_lecture(source_id: str, upload_path: Path, title: str) -> None:
     audio = tmp_path(f"{source_id}.opus")
     try:
+        db.update_source(source_id, {"stage": "preparing"})
         prepare.prepare_audio(upload_path, audio)
         db.upload_file(audio_storage_path(source_id), audio, "audio/ogg")
+        db.update_source(source_id, {"stage": "transcribing"})
         segments, duration = transcribe(audio)
         if not segments:
             raise PrepareError("No speech was found in this recording.")
@@ -138,7 +144,7 @@ def reprocess_lecture(source_id: str) -> None:
         raise ValueError(f"{source_id} is not a lecture")
     audio = tmp_path(f"{source_id}.reprocess.opus")
     try:
-        db.update_source(source_id, {"status": "processing", "error": None})
+        db.update_source(source_id, {"status": "processing", "stage": "transcribing", "error": None})
         db.download_file(audio_storage_path(source_id), audio)
         segments, duration = transcribe(audio)
         if not segments:

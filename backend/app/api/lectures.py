@@ -25,6 +25,7 @@ def _lecture_out(row: db.Row) -> dict[str, object]:
         "source_date": row["source_date"],
         "duration_s": row["duration_s"],
         "status": row["status"],
+        "stage": row.get("stage"),
         "error": row["error"],
     }
 

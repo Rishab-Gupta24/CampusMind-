@@ -10,7 +10,7 @@ def list_courses() -> list[dict[str, object]]:
     rows = (
         db.get_client()
         .table("courses")
-        .select("id, code, title, sections(id, name, instructors(name, role))")
+        .select("id, code, title, sections(id, name, instructors(id, name, role))")
         .order("code")
         .execute()
         .data
