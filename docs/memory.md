@@ -20,6 +20,10 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Decision | Reason |
 | --- | --- | --- |
+| 2026-11-10 | Installable app (PWA): `app/manifest.ts`, icons in `public/icons`, `public/sw.js` (offline page + system notifications; caches nothing else), registered only in production builds | 'Make this app': own window and icon, notifications through the service worker |
+| 2026-11-10 | One-click launcher `CampusMind.bat` → `scripts/start.ps1` (starts only what isn't running; Ollama with 2 model slots; production Next build) + `CampusMind-stop.bat` | Demo laptop: one double-click, no terminals |
+| 2026-11-10 | On backend start, sources still 'processing' are marked failed ('interrupted, upload again') | Background uploads die with the process; they stayed 'processing' forever |
+| 2026-11-10 | Quiz MCQs get a second check (model lists every correct option); kept only if exactly the marked one is correct | Two-correct-option questions seen in testing |
 | 2026-11-10 | Answers may use Markdown tables, lists and LaTeX (`$…$`, `$$…$$`), rendered with react-markdown + remark-gfm + remark-math + rehype-katex + katex | User request: tables and Gemini-style formulas. New libs logged here per Rules §3 |
 | 2026-11-10 | Citation filter ignores brackets inside `$…$`/`$$…$$` | Intervals like $[0, 1]$ must not be read as citations |
 | 2026-11-10 | Passage labels name the course; prompt says never merge facts from different courses | Mixed MATH/PHY/past-paper facts in one sentence (user screenshot) |
@@ -141,6 +145,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 ## 7. Notes for future sessions
 
+- **Start for the demo:** double-click `CampusMind.bat` (production build, faster than `npm run dev`). Install from Chrome/Edge for a full-screen app window.
 - **Before the demo (P1):** delete or replace the 6 'Demo: …' calendar events and 'TEST Handwritten notes - Random variables'. Review suggested calendar dates. Browser reminders fire only while a CampusMind tab is open; the phone-calendar subscription covers the closed case.
 - Quiz generation takes 15–30 s, flashcards ~5 s, OCR ~8 s per scanned page (all on the shared gemma4).
 - **Before the demo:** set Windows env var `OLLAMA_MAX_LOADED_MODELS=2` and restart Ollama (this session ran its own Ollama with it). Install CUDA torch on the demo laptop (README).

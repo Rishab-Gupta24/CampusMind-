@@ -48,7 +48,13 @@ supabase/   Database migrations and seed data
 - [Design](docs/design.md)
 - [Build tasks](docs/tasks.md)
 
-## Run it locally
+## Start the app (Windows, after setup)
+
+Double-click **`CampusMind.bat`**. It starts Ollama (keeping both models loaded), the backend and the app, skips anything already running, and opens <http://localhost:3000>. `CampusMind-stop.bat` stops the backend and app. Use `CampusMind.bat -Rebuild` after pulling new code.
+
+**Install it like an app:** open <http://localhost:3000> in Chrome or Edge and choose **Install CampusMind** in the address bar (on Android: menu → *Add to Home screen*). It opens in its own window with its own icon, and calendar reminders appear as system notifications.
+
+## Run it locally (setup and development)
 
 **Needs:** Python 3.12, Node.js LTS, [ffmpeg](https://ffmpeg.org) on PATH, [Ollama](https://ollama.com), and a Supabase project with `supabase/migrations/*.sql` and `supabase/seed.sql` applied.
 
