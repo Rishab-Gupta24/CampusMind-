@@ -101,7 +101,7 @@ def test_prompt_renders_pdf_and_lecture_passages() -> None:
         badges=["Flagged", "IC"],
     )
     rendered = format_passages([pdf, lecture])
-    assert rendered.startswith("[1] (Academic Regulations · p. 12 · Official)\ntext of x")
+    assert rendered.startswith("[1] (Academic Regulations · campus-wide · p. 12 · Official)\ntext of x")
     assert "[2] (MATH F113 · Lecture 4 · 12:40 · Dr. Asha Demo (IC) · Flagged, IC · flag reason: Exam hint" in rendered
     assert format_time(3725) == "1:02:05"
 
@@ -127,3 +127,15 @@ def test_select_without_official_is_plain_top_k() -> None:
 
     passages = [_passage(f"c{i}", 0.9 - i * 0.1, source_id=f"s{i}") for i in range(7)]
     assert [p["chunk_id"] for p in select_passages(passages, k=5)] == ["c0", "c1", "c2", "c3", "c4"]
+
+
+def test_math_brackets_are_not_citations() -> None:
+    text, cited = clean_citations(r"For $x \in [0, 1]$ the density is flat [2]. $$F = [1]$$ Done [9].", valid=3)
+    assert text == r"For $x \in [0, 1]$ the density is flat [2]. $$F = [1]$$ Done ."
+    assert cited == {2}
+
+
+def test_streaming_math_split_across_pieces() -> None:
+    f = CitationFilter(valid=2)
+    out = "".join(f.feed(p) for p in ["Use $", r"$P(A) \in [0,", " 1]$", "$ here [1] and [5]."]) + f.flush()
+    assert out == r"Use $$P(A) \in [0, 1]$$ here [1] and ."

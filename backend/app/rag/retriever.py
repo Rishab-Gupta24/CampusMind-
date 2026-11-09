@@ -28,6 +28,7 @@ class Passage(TypedDict, total=False):
     course_id: str | None
     section_id: str | None
     instructor: Instructor | None
+    course_code: str | None
     rrf_score: float
     rerank_score: float
     final_score: float
@@ -66,7 +67,7 @@ def retrieve(
         client.table("chunks")
         .select(
             "id, content, page, start_s, end_s, flagged, flag_reason, source_id, "
-            "sources(title, type, kind, course_id, section_id, instructors(name, role))"
+            "sources(title, type, kind, course_id, section_id, instructors(name, role), courses(code))"
         )
         .in_("id", list(rrf))
         .execute()
@@ -92,6 +93,7 @@ def retrieve(
                 "course_id": source.get("course_id"),
                 "section_id": source.get("section_id"),
                 "instructor": source.get("instructors"),
+                "course_code": (source.get("courses") or {}).get("code"),
                 "rrf_score": rrf[row["id"]],
             }
         )

@@ -24,6 +24,39 @@ log = logging.getLogger(__name__)
 Event = dict[str, Any]
 
 LLM_REFUSAL = "The campus sources don't cover this"
+_COURSE_CODE = re.compile(r"\b([A-Z]{2,4})\s?F\s?(\d{3})\b", re.IGNORECASE)
+_QUIZ_INTENT = re.compile(
+    r"^\s*(?:please\s+)?(?:now\s+)?(?:give|generate|make|create|ask|test|quiz)\b.{0,30}?"
+    r"\b(?:questions?|quiz(?:zes)?|mcqs?|practice|test me|problems?)\b(?:\s+(?:on|about|regarding|for|from|of))?\s*(?P<topic>.*)$",
+    re.IGNORECASE,
+)
+_QUIZ_ME = re.compile(
+    r"^\s*(?:please\s+)?(?:quiz|test)\s+me\b(?:\s+(?:on|about|from))?\s*(?P<topic>.*)$", re.IGNORECASE
+)
+
+
+def quiz_topic(question: str) -> str | None:
+    """'give me a question regarding bayes theorem' → 'bayes theorem'; None if it isn't a quiz request."""
+    match = _QUIZ_INTENT.match(question) or _QUIZ_ME.match(question)
+    if not match:
+        return None
+    topic = re.sub(
+        r"^(?:on|about|regarding|for|from|of)\s+", "", match.group("topic").strip(" ?.!"), flags=re.IGNORECASE
+    )
+    return topic or question
+
+
+def effective_course(question: str, course_id: str | None) -> str | None:
+    """Search all courses when the question names a course other than the selected one."""
+    if not course_id:
+        return None
+    named = {f"{a.upper()} F{b}" for a, b in _COURSE_CODE.findall(question)}
+    if not named:
+        return course_id
+    selected = db.course_codes().get(course_id)
+    return course_id if named == {selected} else None
+
+
 _CITATION = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 _MAX_HOLD = 40  # longest "[1, 2, 3, 4, 5]"-style marker we wait for before giving up
 
@@ -31,13 +64,27 @@ _MAX_HOLD = 40  # longest "[1, 2, 3, 4, 5]"-style marker we wait for before givi
 class CitationFilter:
     """Streams text through, dropping `[n]` markers that don't point at a passage that was sent.
 
-    `[1, 3]` becomes `[1][3]`. Brackets that aren't citations pass through unchanged.
+    `[1, 3]` becomes `[1][3]`. Brackets that aren't citations pass through unchanged, and nothing
+    inside LaTeX math ($...$ or $$...$$) is touched, so an interval like $[0, 1]$ survives.
     """
 
     def __init__(self, valid: int) -> None:
         self.valid = valid
         self.held = ""
         self.cited: set[int] = set()
+        self.math = ""  # "", "inline" or "display"
+        self.prev = ""
+
+    def _track_math(self, ch: str) -> None:
+        if ch != "$":
+            return
+        if self.math == "":
+            self.math = "inline"
+        elif self.math == "inline":
+            # "$$" right after opening means display math; otherwise this closes inline math.
+            self.math = "display" if self.prev == "$" else ""
+        elif self.prev == "$":
+            self.math = ""  # second "$" of a closing "$$"
 
     def _clean_marker(self, marker: str) -> str:
         match = _CITATION.fullmatch(marker)
@@ -51,6 +98,12 @@ class CitationFilter:
     def feed(self, text: str) -> str:
         out: list[str] = []
         for ch in text:
+            if not self.held and (self.math or ch == "$"):
+                self._track_math(ch)
+                self.prev = ch
+                out.append(ch)
+                continue
+            self.prev = ch
             if self.held:
                 self.held += ch
                 if ch == "]":
@@ -124,6 +177,7 @@ async def _find_passages(
     question: str, scope: Scope, course_id: str | None, section_id: str | None, lecture_id: str | None
 ) -> tuple[list[Passage], float, list[Passage]]:
     settings = get_settings()
+    course_id = await asyncio.to_thread(effective_course, question, course_id)
     vector = await asyncio.to_thread(embed_query, question)
     candidates = await asyncio.to_thread(
         retrieve, question, vector, scope, course_id, lecture_id, settings.top_k_retrieve
@@ -146,6 +200,11 @@ async def answer(
 ) -> AsyncIterator[Event]:
     """`save=False` skips writing answers/unanswered rows (eval runs must not pollute Insights)."""
     question = question.strip()
+    topic = quiz_topic(question)
+    if topic and not lecture_id:
+        # "Give me questions on X" is practice, not a lookup: hand over to quiz mode.
+        yield {"event": "quiz", "data": {"topic": topic}}
+        return
 
     async def log_unanswered(best: float) -> None:
         if save:

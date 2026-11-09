@@ -209,3 +209,13 @@ def list_thumbs_down(limit: int = 200) -> list[Row]:
         for r in rows
         if r.get("answers")
     ]
+
+
+# ---------- catalog helpers ----------
+
+
+@lru_cache
+def course_codes() -> dict[str, str]:
+    """{course_id: "MATH F113"} — cached; the catalog changes only through seed/migrations."""
+    rows = get_client().table("courses").select("id, code").execute().data
+    return {r["id"]: r["code"] for r in rows}
