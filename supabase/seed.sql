@@ -1,0 +1,19 @@
+-- Demo catalog. All names are fictional placeholders until real names are approved.
+insert into instructors (id, name, role) values
+  ('00000000-0000-0000-0000-0000000000a1', 'Dr. Asha Demo', 'ic'),
+  ('00000000-0000-0000-0000-0000000000a2', 'Dr. Bilal Sample', 'hod'),
+  ('00000000-0000-0000-0000-0000000000a3', 'Dr. Chen Example', 'instructor'),
+  ('00000000-0000-0000-0000-0000000000a4', 'Dr. Dana Placeholder', 'ic')
+on conflict (id) do update set name = excluded.name, role = excluded.role;
+
+insert into courses (id, code, title) values
+  ('00000000-0000-0000-0000-0000000000c1', 'MATH F113', 'Probability and Statistics'),
+  ('00000000-0000-0000-0000-0000000000c2', 'CS F111', 'Computer Programming')
+on conflict (id) do update set code = excluded.code, title = excluded.title;
+
+insert into sections (id, course_id, name, instructor_id) values
+  ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000c1', 'L1', '00000000-0000-0000-0000-0000000000a1'),
+  ('00000000-0000-0000-0000-0000000000d2', '00000000-0000-0000-0000-0000000000c1', 'L2', '00000000-0000-0000-0000-0000000000a3'),
+  ('00000000-0000-0000-0000-0000000000d3', '00000000-0000-0000-0000-0000000000c2', 'L1', '00000000-0000-0000-0000-0000000000a4'),
+  ('00000000-0000-0000-0000-0000000000d4', '00000000-0000-0000-0000-0000000000c2', 'L2', '00000000-0000-0000-0000-0000000000a2')
+on conflict (id) do update set name = excluded.name, instructor_id = excluded.instructor_id;
