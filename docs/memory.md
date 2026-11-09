@@ -11,15 +11,21 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 - **Deadlines:** Round 1 + shortlisting (top 10) → **10 Nov 2026** · Final pitch → **11 Nov 2026**.
 - **Judging needs:** one clear student problem, how AI helps, a **working prototype**.
 - **Constraint:** AED 0 → local open-source models (Ollama) + Supabase free tier.
-- **Current phase:** Docs v2 written. Build not started. Next: task 0.1.
-- **Demo machine:** _fill in: laptop model, RAM, GPU_ → decides `LLM_MODEL`.
+- **Current phase:** Phase 0 setup (0.2 Supabase, 0.3 models, 0.5 seed done; 0.4 waits on the service key).
+- **Demo machine:** this laptop — Ryzen 9 8940HX, 16 GB RAM, RTX 5050 Laptop 8 GB → `LLM_MODEL=gemma4:e4b` (verified with `ollama pull`).
 - **GitHub repo:** https://github.com/Rishab-Gupta24/CampusMind-
-- **Supabase project:** _fill in project name / ref (never the keys)_
+- **Supabase project:** `campusmind`, ref `apqaojhsbhvapllcyqto`, region ap-south-1 (Mumbai), free tier.
 
 ## 2. Decisions log
 
 | Date | Decision | Reason |
 | --- | --- | --- |
+| 2026-11-09 | Next.js 16 + Tailwind v4 (create-next-app defaults); added `lucide-react`, `clsx` | Current versions; both libs approved |
+| 2026-11-09 | Python 3.12 instead of 3.11 | Already installed; 3.15 too new for faster-whisper/torch wheels; 3.12 works with every approved lib |
+| 2026-11-09 | Seed uses fictional names (Dr. Asha Demo, etc.) | No permission yet for real instructor names |
+| 2026-11-09 | `vector` extension left in `public` schema (advisor WARN) | Matches Architecture SQL; low risk while RLS blocks public access |
+| 2026-11-09 | `hybrid_search` gets `set search_path = public`; bucket created in `0003_storage.sql` | Advisor best practice; every Supabase change lives in migrations |
+| 2026-11-09 | Design skill not installed; `design.md` followed directly | Owner's choice |
 | 2026-11-09 | Upload prep with ffmpeg (audio → mono 16 kHz Opus 24 kbps) and PyMuPDF (PDF > 20 MB); 200 MB cap; no custom compressor | Small storage (~10 MB per lecture hour), faster Whisper; building a codec is out of scope |
 | 2026-11-09 | Feedback loop: thumbs up/down, unanswered-question log, Insights page | System improves through usage without training |
 | 2026-11-09 | "Flagged by instructor": cue-phrase match + LLM confirmation with a reason | Surfaces exam hints; two steps limit false flags |

@@ -77,14 +77,14 @@ gantt
   - `.gitignore`: `.env`, `.env.local`, `backend/tmp/`, `node_modules/`, `.next/`, `__pycache__/`, `.venv/`, `*.opus`, `*.mp4`, `*.mp3`.
   - **Check:** repo cloned on every teammate's laptop.
 
-- [ ] **0.2 🔑 Supabase project and schema** ⏱ 20 min
+- [x] **0.2 🔑 Supabase project and schema** ⏱ 20 min
   - Create a free Supabase project `campusmind` (region nearest Dubai).
   - Add `supabase/migrations/0001_init.sql` and `0002_hybrid_search.sql` from `Architecture.md` §4; apply them (Supabase MCP or CLI).
   - Create **private** Storage bucket `sources`.
   - Put `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `backend/.env` (never commit).
   - **Check:** all 9 tables exist; RLS enabled on each; `select hybrid_search('test', array_fill(0, array[1024])::vector, 5);` runs without error.
 
-- [ ] **0.3 🔑 Ollama and models** ⏱ 15 min (downloads run in background)
+- [x] **0.3 🔑 Ollama and models** ⏱ 15 min (downloads run in background)
   - Install Ollama; pick `LLM_MODEL` from `Architecture.md` §11 for the demo laptop.
   - `ollama pull <LLM_MODEL>` and `ollama pull bge-m3`. Install ffmpeg and confirm `ffmpeg -version`.
   - Record the laptop specs and chosen model in `memory.md`.
@@ -101,14 +101,14 @@ gantt
   - `GET /api/courses` returns courses with sections and instructors.
   - **Check:** the endpoint returns the seeded data.
 
-- [ ] **0.6 🔑 Frontend skeleton** ⏱ 30 min
+- [x] **0.6 🔑 Frontend skeleton** ⏱ 30 min
   - Next.js + TypeScript (`strict`) + Tailwind in `frontend/`.
   - Tokens from `design.md` §3 in `globals.css` (light + dark); Inter via `next/font`.
   - `GlassNav` (Ask · Lectures · Flagged · Sources) and empty pages.
   - `lib/api.ts` with typed functions matching `Architecture.md` §7, returning **mock data** until the backend is ready.
   - **Check:** `localhost:3000` shows the glass nav; content scrolls under it; dark mode works.
 
-- [ ] **0.7 README** ⏱ 5 min — setup and run steps (≤ 6 commands, PowerShell variants).
+- [x] **0.7 README** ⏱ 5 min — setup and run steps (≤ 6 commands, PowerShell variants).
 
 ---
 

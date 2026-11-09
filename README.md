@@ -44,9 +44,41 @@ supabase/   Database migrations and seed data
 - [Design](docs/design.md)
 - [Build tasks](docs/tasks.md)
 
+## Run it locally
+
+**Needs:** Python 3.12, Node.js LTS, [ffmpeg](https://ffmpeg.org) on PATH, [Ollama](https://ollama.com), and a Supabase project with `supabase/migrations/*.sql` and `supabase/seed.sql` applied.
+
+**1. Models (once)**
+
+```bash
+ollama pull gemma4:e4b
+ollama pull bge-m3
+```
+
+**2. Backend** — copy `backend/.env.example` to `backend/.env` and fill in `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (never commit this file).
+
+```bash
+cd backend
+python3.12 -m venv .venv                         # Windows: py -3.12 -m venv .venv
+.venv/bin/pip install -r requirements.txt        # Windows: .venv\Scripts\pip install -r requirements.txt
+.venv/bin/uvicorn app.main:app --reload          # Windows: .venv\Scripts\uvicorn app.main:app --reload
+```
+
+Check: <http://localhost:8000/api/health> shows `"ollama": true, "supabase": true`.
+
+**3. Frontend** — copy `frontend/.env.local.example` to `frontend/.env.local`.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open <http://localhost:3000>. While `NEXT_PUBLIC_USE_MOCK=true`, the frontend uses mock data and doesn't need the backend.
+
 ## Status
 
-Early build. Setup and run instructions will be added here as the backend and frontend land.
+Phase 0 (setup) is in progress. See [docs/tasks.md](docs/tasks.md).
 
 ## Team
 
