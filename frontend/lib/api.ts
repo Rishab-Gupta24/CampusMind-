@@ -12,7 +12,7 @@ export type Scope = "all" | "docs" | "lectures";
 export type SourceKind = "campus" | "handout" | "material" | "lecture";
 export type Status = "processing" | "ready" | "failed";
 export type Stage = "preparing" | "transcribing" | "flagging" | "indexing" | "notes";
-export type BadgeName = "Official" | "IC" | "HOD" | "Flagged" | "Your section";
+export type BadgeName = "Official" | "IC" | "HOD" | "Flagged" | "Your section" | "Scanned";
 
 export interface Instructor {
   id?: string;
@@ -53,6 +53,7 @@ export interface SourceRef {
   badges: BadgeName[];
   flag_reason: string | null;
   instructor: Instructor | null;
+  ocr?: boolean;
 }
 
 export interface AskHandlers {
@@ -72,6 +73,7 @@ export interface DocumentItem {
   pages: number | null;
   source_date: string | null;
   status: Status;
+  stage?: string | null;
   error: string | null;
   created_at: string;
   file_url?: string | null;

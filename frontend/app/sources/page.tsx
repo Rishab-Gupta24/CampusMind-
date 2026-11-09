@@ -117,7 +117,7 @@ function Documents() {
                   <td className="px-2 py-2.5 whitespace-nowrap text-text-2 max-sm:hidden">{code(d.course_id)}</td>
                   <td className="px-2 py-2.5 text-text-2 tabular-nums max-sm:hidden">{d.pages ?? ""}</td>
                   <td className="px-2 py-2.5" title={d.error ?? undefined}>
-                    <StatusText status={d.status} />
+                    <StatusText status={d.status} stage={d.stage} />
                   </td>
                   <td className="px-2 py-1.5 text-right whitespace-nowrap">
                     {confirming === d.id ? (

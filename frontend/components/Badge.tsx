@@ -10,6 +10,7 @@ const TOOLTIP: Record<BadgeName, string> = {
   HOD: "Said by the Head of Department",
   Flagged: "Flagged by the instructor as important",
   "Your section": "From your own section",
+  Scanned: "Read from a scan or handwriting by OCR. Check the original page for exact wording.",
 };
 
 export function Badge({ name, title }: { name: BadgeName; title?: string }) {

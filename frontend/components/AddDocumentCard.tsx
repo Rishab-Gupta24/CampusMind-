@@ -50,8 +50,8 @@ export function AddDocumentCard({
   const pick = (f: File | undefined) => {
     setError(null);
     if (!f) return;
-    if (!f.name.toLowerCase().endsWith(".pdf")) {
-      setError("Only PDF files can be added as documents.");
+    if (!/\.(pdf|jpe?g|png|webp)$/i.test(f.name)) {
+      setError("Add a PDF, or a photo or scan (jpg or png) of notes.");
       return;
     }
     if (f.size > MAX_MB * 1024 * 1024) {
@@ -59,7 +59,7 @@ export function AddDocumentCard({
       return;
     }
     setFile(f);
-    if (!title) setTitle(f.name.replace(/\.pdf$/i, "").replace(/[_-]+/g, " "));
+    if (!title) setTitle(f.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " "));
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -98,7 +98,7 @@ export function AddDocumentCard({
           {doc.status === "failed" ? <p className="mt-1 text-[15px] text-danger">{doc.error}</p> : null}
           {doc.status === "ready" ? <p className="mt-1 text-[15px] text-text-2">{doc.pages} pages indexed.</p> : null}
         </div>
-        <StatusText status={doc.status} />
+        <StatusText status={doc.status} stage={doc.stage} />
       </section>
     );
   }
@@ -118,13 +118,13 @@ export function AddDocumentCard({
         )}
       >
         <UploadCloud aria-hidden size={20} strokeWidth={1.5} className="text-text-2" />
-        <span className="text-[15px] text-text">{file ? file.name : "Drop a PDF here or choose a file"}</span>
-        <span className="text-[13px] text-text-2">Text PDFs only; scanned pages can&apos;t be read yet</span>
+        <span className="text-[15px] text-text">{file ? file.name : "Drop a PDF or a photo of notes here"}</span>
+        <span className="text-[13px] text-text-2">Scanned pages and handwriting are read automatically (about 8 s a page)</span>
       </button>
       <input
         ref={inputRef}
         type="file"
-        accept="application/pdf,.pdf"
+        accept="application/pdf,.pdf,image/jpeg,image/png,image/webp"
         className="sr-only"
         aria-label="PDF document"
         onChange={(e) => pick(e.target.files?.[0])}

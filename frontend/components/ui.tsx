@@ -124,7 +124,12 @@ export function StatusText({ status, stage }: { status: string; stage?: string |
     flagging: "Finding important moments…",
     indexing: "Indexing…",
     notes: "Writing notes…",
+    reading: "Reading…",
   };
+  if (status === "processing" && stage?.startsWith("ocr:")) {
+    const [done, total] = stage.slice(4).split("/");
+    return <span className="text-[13px] text-text-2 tabular-nums">Reading page {done} of {total}…</span>;
+  }
   if (status === "ready") return <span className="text-[13px] text-good">Ready</span>;
   if (status === "failed") return <span className="text-[13px] text-danger">Failed</span>;
   return <span className="text-[13px] text-text-2">{(stage && stageLabel[stage]) || "Processing…"}</span>;

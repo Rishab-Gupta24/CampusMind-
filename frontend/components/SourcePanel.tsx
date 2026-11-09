@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/Badge";
+import { allBadges } from "@/components/SourceChip";
 import { api, type SourceRef } from "@/lib/api";
 import { formatTime, ROLE_TITLE, sourceLabel } from "@/lib/format";
 
@@ -74,9 +75,9 @@ export function SourcePanel({ source, onClose }: { source: SourceRef | null; onC
           </button>
         </div>
 
-        {source.badges.length ? (
+        {allBadges(source).length ? (
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {source.badges.map((b) => (
+            {allBadges(source).map((b) => (
               <Badge key={b} name={b} />
             ))}
           </div>
