@@ -90,13 +90,13 @@ gantt
   - Record the laptop specs and chosen model in `memory.md`.
   - **Check:** `ollama run <LLM_MODEL> "hello"` replies; `/api/embed` with `bge-m3` returns 1024 numbers.
 
-- [ ] **0.4 🔑 Backend skeleton** ⏱ 20 min
+- [x] **0.4 🔑 Backend skeleton** ⏱ 20 min
   - `backend/` venv (Python 3.11), `requirements.txt` with approved libraries only.
   - `app/main.py` (CORS for `localhost:3000`), `config.py` (all settings from `Architecture.md` §9), `db.py` (Supabase client), `.env.example`.
   - `GET /api/health` → `{ollama, supabase, llm_model, chunks}`.
   - **Check:** `/api/health` shows `ollama: true, supabase: true`.
 
-- [ ] **0.5 Seed catalog** ⏱ 10 min
+- [x] **0.5 Seed catalog** ⏱ 10 min
   - `supabase/seed.sql`: 1–2 courses (e.g. MATH F113), 2 sections each, instructors with roles (`ic`, `hod`, `instructor`). Use real names only with permission; otherwise clearly demo names.
   - `GET /api/courses` returns courses with sections and instructors.
   - **Check:** the endpoint returns the seeded data.

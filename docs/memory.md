@@ -11,7 +11,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 - **Deadlines:** Round 1 + shortlisting (top 10) → **10 Nov 2026** · Final pitch → **11 Nov 2026**.
 - **Judging needs:** one clear student problem, how AI helps, a **working prototype**.
 - **Constraint:** AED 0 → local open-source models (Ollama) + Supabase free tier.
-- **Current phase:** Phase 0 setup (0.2 Supabase, 0.3 models, 0.5 seed done; 0.4 waits on the service key).
+- **Current phase:** Phase 0 done except 0.1 check (teammates clone). Next: Phase 1 ingestion.
 - **Demo machine:** this laptop — Ryzen 9 8940HX, 16 GB RAM, RTX 5050 Laptop 8 GB → `LLM_MODEL=gemma4:e4b` (verified with `ollama pull`).
 - **GitHub repo:** https://github.com/Rishab-Gupta24/CampusMind-
 - **Supabase project:** `campusmind`, ref `apqaojhsbhvapllcyqto`, region ap-south-1 (Mumbai), free tier.
