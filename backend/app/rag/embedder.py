@@ -18,7 +18,9 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
         for start in range(0, len(texts), BATCH_SIZE):
             batch = texts[start : start + BATCH_SIZE]
             try:
-                res = client.post("/api/embed", json={"model": settings.embed_model, "input": batch})
+                res = client.post(
+                    "/api/embed", json={"model": settings.embed_model, "input": batch, "keep_alive": "30m"}
+                )
                 res.raise_for_status()
             except httpx.HTTPError as exc:
                 raise EmbedError("The embedding model is not reachable. Check that Ollama is running.") from exc
