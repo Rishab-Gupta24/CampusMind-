@@ -10,13 +10,15 @@ import re
 from typing import Any, Literal
 
 from app.config import get_settings
-from app.llm.base import get_provider
+from app.llm.base import LLMError, get_provider
 from app.rag import reranker
 from app.rag.embedder import embed_query
 from app.rag.priority import apply_boosts
 from app.rag.prompts import (
     FLASHCARDS_SYSTEM,
     FLASHCARDS_USER,
+    MCQ_CHECK_SYSTEM,
+    MCQ_CHECK_USER,
     QUIZ_SYSTEM,
     QUIZ_USER,
     format_time,
@@ -248,9 +250,41 @@ async def generate_quiz(
             questions.append(cleaned)
         if len(questions) == count:
             break
+    questions = [q for q in questions if q["type"] != "mcq" or await mcq_is_sound(q)]
     if not questions:
         raise StudyError("CampusMind couldn't write questions from the material it found. Try a narrower topic.")
     return {"topic": topic, "questions": questions}
+
+
+async def mcq_is_sound(q: dict[str, Any]) -> bool:
+    """Second opinion: keep a multiple-choice question only if exactly the marked option is correct.
+
+    Catches questions with two right answers (e.g. a definition and an equivalent formula) and wrong keys.
+    If the check itself fails, the question is kept: its source is always shown.
+    """
+    options = "\n".join(f"{i}. {opt}" for i, opt in enumerate(q["options"]))
+    try:
+        raw = await get_provider().generate(
+            [
+                {"role": "system", "content": MCQ_CHECK_SYSTEM},
+                {
+                    "role": "user",
+                    "content": MCQ_CHECK_USER.format(
+                        passage=_trim(q["source"]["excerpt"]), question=q["question"], options=options
+                    ),
+                },
+            ],
+            temperature=0.0,
+            max_tokens=40,
+            json_mode=True,
+        )
+    except LLMError:
+        return True
+    correct = _parse_json(raw).get("correct")
+    if not isinstance(correct, list):
+        return True
+    marked = {int(c) for c in correct if isinstance(c, int | str) and str(c).isdigit()}
+    return marked == {q["answer"]}
 
 
 async def generate_flashcards(

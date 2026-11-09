@@ -192,3 +192,17 @@ DEADLINES_USER = """Document: {title}
 Course: {course}
 Page {page}:
 {text}"""
+
+
+# ---------- Quiz check: exactly one correct option ----------
+
+MCQ_CHECK_SYSTEM = """You check a multiple-choice question against a source passage.
+For each option, decide if it is correct according to the passage (mathematically equivalent forms count as correct).
+Return one JSON object only: {"correct": [<indexes 0-3 of every correct option>]}"""
+
+MCQ_CHECK_USER = """Passage:
+{passage}
+
+Question: {question}
+Options:
+{options}"""

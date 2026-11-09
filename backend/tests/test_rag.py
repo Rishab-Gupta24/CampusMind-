@@ -145,3 +145,26 @@ def test_clean_text_removes_nul_and_control_chars() -> None:
     from app.ingest.pdf_loader import clean_text
 
     assert clean_text("Calc\x00ulus\x07 cheat\tsheet\nline") == "Calculus cheat\tsheet\nline"
+
+
+def test_mcq_check_keeps_only_single_correct(monkeypatch) -> None:
+    import asyncio
+
+    from app.rag import study
+
+    class Fake:
+        def __init__(self, reply: str) -> None:
+            self.reply = reply
+
+        async def generate(self, *_: object, **__: object) -> str:
+            return self.reply
+
+    q = {"type": "mcq", "question": "P(A|B)?", "options": ["a", "b", "c", "d"], "answer": 1, "source": {"excerpt": "x"}}
+    for reply, expected in [
+        ('{"correct": [1]}', True),
+        ('{"correct": [0, 1]}', False),
+        ('{"correct": [2]}', False),
+        ("garbage", True),
+    ]:
+        monkeypatch.setattr(study, "get_provider", lambda r=reply: Fake(r))
+        assert asyncio.run(study.mcq_is_sound(q)) is expected
