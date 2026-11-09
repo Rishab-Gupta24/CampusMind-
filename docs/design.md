@@ -61,6 +61,20 @@ CSS variables in `styles/globals.css`, mapped into Tailwind. Use only these.
 
 Check WCAG AA (4.5:1) for all text on its surface in both themes.
 
+### 3a. Exception: deadline urgency colours (added 2026-11-10)
+
+Calendar items use four fixed steps, never a gradient, and always pair the colour with a text label ("3 days left"):
+
+| Token | Light | Dark | Meaning |
+| --- | --- | --- | --- |
+| `--event-exam` | `#D70015` | `#FF6961` | Exam or quiz |
+| `--urgency-green` | `#248A3D` | `#30D158` | Plenty of time (> 50% of the window left, or > 7 days) |
+| `--urgency-yellow` | `#B88A00` | `#FFD60A` | Getting close (> 25%, or > 3 days) |
+| `--urgency-orange` | `#C93400` | `#FF9F0A` | Soon |
+| `--urgency-red` | `#FF1F1F` | `#FF453A` | Due within 24 hours |
+
+Colours appear only as dots, pill tints and pill text; body text stays `--text`.
+
 ## 4. Typography
 
 - System stack: `-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", sans-serif`; load **Inter** via `next/font` as the cross-platform fallback.

@@ -15,6 +15,10 @@ Students can't quickly get trustworthy answers from their own campus documents a
 - **Flagged by instructor** — detects moments like "this will come in the exam" and explains why each was flagged.
 - **Who said it** — every source shows its origin (Official, IC, HOD, your section). Priority is always visible, never hidden.
 - **Gets better with use** — answer ratings and a list of unanswered questions show admins what to add next.
+- **Practice** — 5–10 question quizzes on any topic or chapter (multiple choice, fill-in, short answer), each showing its source, e.g. "Past paper · 2021-22 Sem II · Mid-semester exam · Q1(a)". Plus flashcards.
+- **Calendar** — exam and deadline dates found in handouts, colour-coded by urgency, with reminders and a subscribe link for Google, Outlook or Apple Calendar.
+- **Handwritten notes and scans** — photos and scanned PDFs are read by a local vision model and become searchable.
+- **Rich answers** — tables and properly rendered formulas.
 
 ## Tech stack
 

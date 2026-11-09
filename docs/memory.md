@@ -11,7 +11,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 - **Deadlines:** Round 1 + shortlisting (top 10) → **10 Nov 2026** · Final pitch → **11 Nov 2026**.
 - **Judging needs:** one clear student problem, how AI helps, a **working prototype**.
 - **Constraint:** AED 0 → local open-source models (Ollama) + Supabase free tier.
-- **Current phase:** Phases 0–5 built and browser-tested (Ask, Lectures, lecture detail, Flagged, Sources/Insights). Eval 15/15 + 3/3 on the provisional set. Next: Phase D real data (D.1–D.4), then Phase 6 readiness.
+- **Current phase:** Phases 0–5 plus P1 features built and browser-tested: rich answers (tables, LaTeX), quiz mode + flashcards, OCR for scans/handwriting, calendar with deadline extraction, colours, subscribe feed and reminders. Eval 15/15 + 3/3. Pitch draft in `docs/pitch.md`. Next: Phase D real data, Phase 6 readiness.
 - **Demo machine:** this laptop — Ryzen 9 8940HX, 16 GB RAM, RTX 5050 Laptop 8 GB → `LLM_MODEL=gemma4:e4b` (verified with `ollama pull`).
 - **GitHub repo:** https://github.com/Rishab-Gupta24/CampusMind-
 - **Supabase project:** `campusmind`, ref `apqaojhsbhvapllcyqto`, region ap-south-1 (Mumbai), free tier.
@@ -20,6 +20,20 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Decision | Reason |
 | --- | --- | --- |
+| 2026-11-10 | Answers may use Markdown tables, lists and LaTeX (`$…$`, `$$…$$`), rendered with react-markdown + remark-gfm + remark-math + rehype-katex + katex | User request: tables and Gemini-style formulas. New libs logged here per Rules §3 |
+| 2026-11-10 | Citation filter ignores brackets inside `$…$`/`$$…$$` | Intervals like $[0, 1]$ must not be read as citations |
+| 2026-11-10 | Passage labels name the course; prompt says never merge facts from different courses | Mixed MATH/PHY/past-paper facts in one sentence (user screenshot) |
+| 2026-11-10 | Question naming one course code with no course selected → search that course; naming a different course than the selected one → search all | 'Compare MATH F113 and PHY F111' was refused with MATH selected; PHY handout dropped out of the top 40 once ~300 PDFs were ingested |
+| 2026-11-10 | Quiz mode (`/api/quiz`, Practice page): 5–10 questions (MCQ, fill-in, short), each with its source; 'Past paper' label only when the passage really is a past paper (`material` + PYQ in title) | User request; provenance never comes from the model's claim |
+| 2026-11-10 | Past-paper questions show the original question and **no AI-computed answer** | Test run: the model 'solved' a probability as 5/3. Sources hold no official solutions |
+| 2026-11-10 | Flashcards (`/api/flashcards`): notes/handouts/lectures first; Again / Got it queue stored in localStorage | Idea from turbo.ai's public feature list; adapted, not copied |
+| 2026-11-10 | 'Give me questions on X' in Ask → `quiz` SSE event → 'Start quiz' card | Ask refused these as lookups (user screenshot) |
+| 2026-11-10 | OCR via gemma4 vision (already loaded; no new model): pages with < 30 chars of text, 150 dpi, max 80 pages; chunks marked `ocr` → 'Scanned' badge; jpg/png/webp uploads wrapped into PDF | Test on a real scanned answer key: ~8 s/page, printed ~99%, handwriting ~85%, tables/diagrams weaker, one header block skipped → prompt says transcribe everything |
+| 2026-11-10 | Calendar: `events` table (migration 0010); dates extracted from handouts/circulars as **suggested** events (model copies dates as written; Python parses DD.MM.YY, FN = 09:00, AN = 14:00 Dubai; the date must appear on the page) | Never invent dates; the student confirms |
+| 2026-11-10 | Urgency colours: exams/quizzes red; assignments green (> 50% of the window left) → yellow (> 25%) → orange → bright red (< 24 h); without an opening date: > 7 d green, > 3 d yellow. Always with a text label | User spec; design.md exception §3a |
+| 2026-11-10 | Notifications: ICS feed (`/api/calendar.ics`) with reminders (deadlines −1 d / −2 h, exams −1 d / −1 h) + browser notifications while CampusMind is open | Works with the app closed through the phone's calendar; server push needs hosting + 2 new deps (future scope) |
+| 2026-11-10 | Moodle/LMS sync not built; documented in `docs/pitch.md` 'What else we could have added' | User decision; materials need consent / IT approval |
+| 2026-11-10 | Demo calendar events titled 'Demo: …' (6 events, MATH F113) | Show the colour range in the pitch; delete or replace with real dates |
 | 2026-11-09 | Frontend talks to the real API only (mock mode removed); `NEXT_PUBLIC_API_URL=http://127.0.0.1:8000` | Backend was ready before the UI; one code path to test |
 | 2026-11-09 | Answer text rendered by a small citation renderer (`AnswerText`), not `react-markdown` | Answers are short plain text; avoids a dependency |
 | 2026-11-09 | Citations renumbered 1..k for display (backend keeps passage numbers) | Model may cite only passage 5; showing "5" alone looks broken |
@@ -70,6 +84,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Change | Files |
 | --- | --- | --- |
+| 2026-11-10 | P1: rich answers, quiz + flashcards (Practice page), OCR, calendar (events API, extraction, ICS, page, reminders), pitch draft | `backend/app/rag/{study,prompts,answerer}.py`, `backend/app/ingest/{ocr,deadlines,pdf_loader}.py`, `backend/app/api/{study,events}.py`, `backend/app/calendar_ics.py`, `frontend/app/{practice,calendar}`, `docs/pitch.md` |
 | 2026-11-09 | Phases 4–5: Ask thread (scope, examples, streaming, chips, source panel, feedback), course selector, Lectures list + upload card with live stages, lecture detail (Summary/Flagged/Transcript/Ask, audio bar, `?t=` deep links), Flagged page, Sources (documents table + add/delete, Insights) | `frontend/app/*`, `frontend/components/*`, `frontend/lib/*` |
 | 2026-11-09 | Phase 3: flagger (cue regex + LLM JSON check), lecture notes (parts + combine), `reprocess_lecture()`, `GET /api/flagged`, `GET /api/insights`; lecture detail uses exact moments | `backend/app/ingest/{flagger,lecture_notes,pipeline}.py`, `backend/app/api/{flagged,insights,lectures}.py` |
 | 2026-11-09 | Phase 2: LLM provider, retriever, reranker, priority, prompts, answerer, `/api/ask` (SSE), `/api/feedback`, eval runner + provisional set; 22 unit tests | `backend/app/{llm,rag,api}/*`, `backend/eval/*` |
@@ -85,6 +100,11 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Bug | Cause | Fix | Status |
 | --- | --- | --- | --- | --- |
+| 2026-11-10 | Prompt contained a form-feed character instead of `\frac` | `\f` escape in a non-raw Python string written by a script | Raw string; character replaced | Fixed |
+| 2026-11-10 | Quiz LaTeX broke (`\text` became a tab) | Model writes LaTeX in JSON strings without escaping backslashes | Escape backslash commands before `json.loads` | Fixed |
+| 2026-11-10 | Chunk upsert failed with Postgres 22P05 on some PDFs (reported by the testing-materials session) | NUL characters in PDF text | `clean_text()` strips C0 control characters from page and OCR text | Fixed (unit test) |
+| 2026-11-10 | `/calendar` prerender error: `new Date()` in a client component | `cacheComponents` | Page wrapped in `<Suspense>` | Fixed |
+| 2026-11-10 | Some AI-written MCQs have two correct options (e.g. P(A∩B)/P(B) and Bayes' formula) | Model limit | Every question shows its source; prompt asks for exactly one correct option | Open (known limit) |
 | 2026-11-09 | `/lectures/[id]` errored: `usePathname()` outside `<Suspense>` | `cacheComponents: true` (create-next-app default) requires Suspense for runtime hooks in the layout | Nav split into `NavBar` + Suspense-wrapped `ActiveNav` | Fixed |
 | 2026-11-09 | `/sources` page 618 px wide on a 375 px phone | Table min-content widened the mobile layout viewport despite `overflow-x-auto` | Hide secondary columns on phones | Fixed |
 | 2026-11-09 | Every question took ~50 s to first token | (1) Ollama 1-model limit swapped bge-m3/gemma; (2) warm-up loaded gemma with default 4096 ctx, real calls used 8192 → reload; (3) reranker on CPU (17 s) | 2-model Ollama, same options in warm-up, CUDA torch | Fixed: 2.2 s median |
@@ -102,6 +122,8 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Commit | Correct (/15) | Refused (/3) | Flag recall | First-token time | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-10 | p1 | 15/15 | 3/3 | — | 2.3 s median, 3.9 s max | Corpus now includes the testing session's bulk PDFs; + course code in the question selects that course |
+| 2026-11-10 | p1 (before fix) | 13/15 | 3/3 | — | 2.6 s median | Tables/LaTeX prompt; 2 PHY misses: handout out of the top 40 in the bigger corpus |
 | 2026-11-09 | phase-2 tuned | 15/15 | 3/3 | 2/2 (TEST lecture) | 2.2 s median, 2.6 s max | + TOP_K_RETRIEVE 40 (phy-quiz1 fixed) |
 | 2026-11-09 | phase-2 | 14/15 | 3/3 | — | 2.3 s median | + `material` kind, official-passage rule, gate 0.02 |
 | 2026-11-09 | phase-2 | 10/15 | 3/3 | — | 2.1 s median | + OR full-text, exact vector scan, reranker sees title/instructor |
@@ -119,6 +141,8 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 ## 7. Notes for future sessions
 
+- **Before the demo (P1):** delete or replace the 6 'Demo: …' calendar events and 'TEST Handwritten notes - Random variables'. Review suggested calendar dates. Browser reminders fire only while a CampusMind tab is open; the phone-calendar subscription covers the closed case.
+- Quiz generation takes 15–30 s, flashcards ~5 s, OCR ~8 s per scanned page (all on the shared gemma4).
 - **Before the demo:** set Windows env var `OLLAMA_MAX_LOADED_MODELS=2` and restart Ollama (this session ran its own Ollama with it). Install CUDA torch on the demo laptop (README).
 - **Eval set is provisional.** Replace with the real D.3 set; questions 14–15 point at the TEST lecture. Re-run `python eval/run_eval.py` after.
 - Answers quoting dates from past papers don't always name the semester even though the prompt asks — watch in demo questions.

@@ -296,7 +296,7 @@ flowchart LR
 ## Phase 7 — P1 upgrades (only after Round 1) · P1
 
 - [ ] **7.1** `llm/gemini_provider.py` + `LLM_PROVIDER=gemini` switch; compare speed and eval score.
-- [ ] **7.2** Practice quiz (5 MCQs per lecture, weighted toward flagged moments) in the Summary tab.
+- [x] **7.2** Practice quiz (5 MCQs per lecture, weighted toward flagged moments) in the Summary tab.
 - [ ] **7.3** Voice question: mic button → record → Whisper → ask.
 - [ ] **7.4** Answer in the question's language (Arabic, Hindi); add 2 eval questions per language.
 - [ ] **7.5** Most-asked questions on the home page from `answers` counts.
@@ -306,8 +306,8 @@ flowchart LR
 
 ## Phase 8 — Pitch material
 
-- [ ] **8.1** 5–6 slides: Problem · Solution · How AI helps (pipeline diagram from `Architecture.md`) · Demo · Gets smarter with use (feedback loop diagram) · Impact and future.
-- [ ] **8.2** One-line answers ready for judges:
+- [ ] **8.1** (outline drafted in `docs/pitch.md`; slides still to make) 5–6 slides: Problem · Solution · How AI helps (pipeline diagram from `Architecture.md`) · Demo · Gets smarter with use (feedback loop diagram) · Impact and future.
+- [x] **8.2** One-line answers ready for judges:
   - *Accuracy?* Answers only from sources, reranker, refuses when unsure, 13/15 on our test set.
   - *Why not ChatGPT?* It doesn't know BPDC's rules or your lectures, and it can't cite them.
   - *Privacy?* Models run locally; keys server-side; lectures only with consent.
