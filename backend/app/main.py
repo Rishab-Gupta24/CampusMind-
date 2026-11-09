@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api import ask, catalog, documents, feedback, health, lectures
+from app.api import ask, catalog, documents, feedback, flagged, health, insights, lectures
 from app.config import get_settings
 from app.db import NotConfiguredError
 from app.llm.base import get_provider
@@ -78,3 +78,5 @@ app.include_router(documents.router)
 app.include_router(lectures.router)
 app.include_router(ask.router)
 app.include_router(feedback.router)
+app.include_router(flagged.router)
+app.include_router(insights.router)

@@ -62,7 +62,7 @@ async def upload_lecture(
     except HTTPException:
         db.update_source(source_id, {"status": "failed", "error": "The file was too large."})
         raise
-    background.add_task(pipeline.process_lecture, source_id, upload_path)
+    background.add_task(pipeline.process_lecture, source_id, upload_path, row["title"])
     return {"source_id": source_id, "status": "processing"}
 
 
@@ -90,31 +90,34 @@ def get_lecture(source_id: uuid.UUID) -> dict[str, object]:
     if row["status"] != "ready":
         return detail
 
-    flagged = db.flagged_chunks(sid)
-    flagged_starts = [(c["start_s"], c["end_s"]) for c in flagged]
+    notes = db.get_lecture_notes(sid) or {}
+    moments = notes.get("flagged_moments") or []
     transcript = db.download_json(pipeline.transcript_storage_path(sid))
     for line in transcript:
-        line["flagged"] = any(start <= line["start_s"] < end for start, end in flagged_starts)
+        line["flagged"] = any(m["start_s"] <= line["start_s"] < m["end_s"] for m in moments)
 
-    notes = db.get_lecture_notes(sid) or {}
     detail.update(
         {
             "transcript": transcript,
             "summary": notes.get("summary") or "",
             "key_points": notes.get("key_points") or [],
             "formulas": notes.get("formulas") or [],
-            "flagged": [
-                {
-                    "source_id": sid,
-                    "title": row["title"],
-                    "start_s": c["start_s"],
-                    "reason": c["flag_reason"],
-                    "quote": c["content"],
-                    "instructor": row.get("instructors"),
-                }
-                for c in flagged
-            ],
+            "flagged": [flagged_out(row, m) for m in moments],
             "audio_url": db.signed_url(row["storage_path"]) if row["storage_path"] else None,
         }
     )
     return detail
+
+
+def flagged_out(row: db.Row, moment: db.Row) -> dict[str, object]:
+    return {
+        "source_id": row["id"],
+        "title": row["title"],
+        "source_date": row.get("source_date"),
+        "start_s": moment["start_s"],
+        "end_s": moment["end_s"],
+        "reason": moment["reason"],
+        "quote": moment["quote"],
+        "instructor": row.get("instructors"),
+        "section": (row.get("sections") or {}).get("name"),
+    }
