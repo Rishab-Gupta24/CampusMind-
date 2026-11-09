@@ -11,7 +11,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 - **Deadlines:** Round 1 + shortlisting (top 10) → **10 Nov 2026** · Final pitch → **11 Nov 2026**.
 - **Judging needs:** one clear student problem, how AI helps, a **working prototype**.
 - **Constraint:** AED 0 → local open-source models (Ollama) + Supabase free tier.
-- **Current phase:** Phases 1–3 done (ingestion, cited answers, flagged moments + notes). Eval 15/15 + 3/3 on the provisional set. Next: Phase 4/5 frontend.
+- **Current phase:** Phases 0–5 built and browser-tested (Ask, Lectures, lecture detail, Flagged, Sources/Insights). Eval 15/15 + 3/3 on the provisional set. Next: Phase D real data (D.1–D.4), then Phase 6 readiness.
 - **Demo machine:** this laptop — Ryzen 9 8940HX, 16 GB RAM, RTX 5050 Laptop 8 GB → `LLM_MODEL=gemma4:e4b` (verified with `ollama pull`).
 - **GitHub repo:** https://github.com/Rishab-Gupta24/CampusMind-
 - **Supabase project:** `campusmind`, ref `apqaojhsbhvapllcyqto`, region ap-south-1 (Mumbai), free tier.
@@ -20,6 +20,14 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Decision | Reason |
 | --- | --- | --- |
+| 2026-11-09 | Frontend talks to the real API only (mock mode removed); `NEXT_PUBLIC_API_URL=http://127.0.0.1:8000` | Backend was ready before the UI; one code path to test |
+| 2026-11-09 | Answer text rendered by a small citation renderer (`AnswerText`), not `react-markdown` | Answers are short plain text; avoids a dependency |
+| 2026-11-09 | Citations renumbered 1..k for display (backend keeps passage numbers) | Model may cite only passage 5; showing "5" alone looks broken |
+| 2026-11-09 | Chips show max 3 badges + "+n"; source panel shows every badge | design.md §7.2 limit vs Rules §1.4 "every boost visible" |
+| 2026-11-09 | `sources.stage` column (migration `0008`) drives "Preparing → Transcribing → Finding important moments → Ready" | Upload card needs real progress, not a fake timer |
+| 2026-11-09 | Popovers/panels use `.glass-strong` (97% surface) | Nested inside the glass nav, backdrop blur can't reach the page, so text behind showed through |
+| 2026-11-09 | Phone tables: secondary columns fold into a sub-line under the title (`max-sm:hidden`) | A wide table (even in `overflow-x-auto`) widened Chrome's mobile layout viewport to 618 px |
+| 2026-11-09 | Insights lives as a tab on Sources (no separate `/insights` route) | design.md §7.7 |
 | 2026-11-09 | New source kind `material` (past papers, slides, notes, manuals): searchable, **no Official badge/boost**; 17 existing PYQ/slide/notes/manual uploads reclassified by title (migration `0007`) | PYQ cover pages stated old weightages/dates and outranked the current handout, while wrongly wearing "Official" |
 | 2026-11-09 | Final 5 passages: max 2 per source, and the best gate-passing Official passage is always included; prompt says Official wins over older material and to name the semester for dates from material | Visible rule (badge + prompt), fixed 3 eval misses; boosts alone (0.04) can't close a 0.3 rerank gap |
 | 2026-11-09 | `MIN_RELEVANCE` 0.3 → **0.02**; `TOP_K_RETRIEVE` 20 → **40** | Eval: off-topic questions score ≤ 0.004, hard-but-relevant (garbled tables) 0.04+; LLM's own "sources don't cover this" is a second gate. 40 candidates cost ~0.3 s more on GPU |
@@ -62,6 +70,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Change | Files |
 | --- | --- | --- |
+| 2026-11-09 | Phases 4–5: Ask thread (scope, examples, streaming, chips, source panel, feedback), course selector, Lectures list + upload card with live stages, lecture detail (Summary/Flagged/Transcript/Ask, audio bar, `?t=` deep links), Flagged page, Sources (documents table + add/delete, Insights) | `frontend/app/*`, `frontend/components/*`, `frontend/lib/*` |
 | 2026-11-09 | Phase 3: flagger (cue regex + LLM JSON check), lecture notes (parts + combine), `reprocess_lecture()`, `GET /api/flagged`, `GET /api/insights`; lecture detail uses exact moments | `backend/app/ingest/{flagger,lecture_notes,pipeline}.py`, `backend/app/api/{flagged,insights,lectures}.py` |
 | 2026-11-09 | Phase 2: LLM provider, retriever, reranker, priority, prompts, answerer, `/api/ask` (SSE), `/api/feedback`, eval runner + provisional set; 22 unit tests | `backend/app/{llm,rag,api}/*`, `backend/eval/*` |
 | 2026-11-09 | Real-data ingest test: 19 BPDC PDFs (MATH F113 + PHY F111 handouts, PHY F110 lab handout + manual, 5 MOW slide decks, 1 MOW notes, 9 PYQs) uploaded via `/api/documents`; all `ready`, 488 chunks. Retrieval probe (16 questions, embed → `hybrid_search`): **15/16 expected doc in top 5**, 13 at rank 1. Miss: "When was the MATH F113 midsem / open book?" → PYQ headers outrank the handout | Supabase data only |
@@ -76,6 +85,8 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Bug | Cause | Fix | Status |
 | --- | --- | --- | --- | --- |
+| 2026-11-09 | `/lectures/[id]` errored: `usePathname()` outside `<Suspense>` | `cacheComponents: true` (create-next-app default) requires Suspense for runtime hooks in the layout | Nav split into `NavBar` + Suspense-wrapped `ActiveNav` | Fixed |
+| 2026-11-09 | `/sources` page 618 px wide on a 375 px phone | Table min-content widened the mobile layout viewport despite `overflow-x-auto` | Hide secondary columns on phones | Fixed |
 | 2026-11-09 | Every question took ~50 s to first token | (1) Ollama 1-model limit swapped bge-m3/gemma; (2) warm-up loaded gemma with default 4096 ctx, real calls used 8192 → reload; (3) reranker on CPU (17 s) | 2-model Ollama, same options in warm-up, CUDA torch | Fixed: 2.2 s median |
 | 2026-11-09 | Ollama 500 on `/api/chat` from Python while curl worked | Model load failing under memory pressure while the reranker downloaded + 1-model limit | Same fix as above | Fixed |
 | 2026-11-09 | `[1, 2, 3, 4, 5]` leaked unfiltered | Citation filter only held 12 chars | Hold up to 40 chars | Fixed |

@@ -247,37 +247,37 @@ flowchart LR
 
 ## Phase 4 — Frontend: Ask · ⏱ 2 h 30 min (+45 min to connect) · P0
 
-- [ ] **4.1 🔑 API client** — `lib/api.ts` ⏱ 30 min
+- [x] **4.1 🔑 API client** — `lib/api.ts` ⏱ 30 min
   - Typed `ask()` that parses SSE from `fetch` (POST body) and calls `onToken`, `onSources`, `onNotFound`, `onDone`, `onError`.
   - `getCourses`, `sendFeedback`, `uploadDocument`, `uploadLecture`, `getLectures`, `getLecture`, `getFlagged`, `getInsights`.
   - Mock mode via `NEXT_PUBLIC_MOCK=1` until the backend is ready.
 
-- [ ] **4.2 🔑 Course selector** — `CourseSelector.tsx`, `lib/prefs.ts` ⏱ 25 min
+- [x] **4.2 🔑 Course selector** — `CourseSelector.tsx`, `lib/prefs.ts` ⏱ 25 min
   - Glass popover: Course → Section. Remember in `localStorage` (wrapped in try/catch).
 
-- [ ] **4.3 🔑 Ask page** — `AskBox`, `ScopeToggle`, example chips, empty state ⏱ 30 min (per `design.md` §7.1)
+- [x] **4.3 🔑 Ask page** — `AskBox`, `ScopeToggle`, example chips, empty state ⏱ 30 min (per `design.md` §7.1)
 
-- [ ] **4.4 🔑 Answer view** — `AnswerView.tsx` ⏱ 30 min
+- [x] **4.4 🔑 Answer view** — `AnswerView.tsx` ⏱ 30 min
   - Streaming markdown, `[n]` as accent superscripts linked to chips; loading dots; not-found and error states; `aria-live`.
 
-- [ ] **4.5 🔑 Source chips, badges, panel** — `SourceChip`, `Badge`, `SourcePanel` ⏱ 30 min (per `design.md` §7.2–7.3)
+- [x] **4.5 🔑 Source chips, badges, panel** — `SourceChip`, `Badge`, `SourcePanel` ⏱ 30 min (per `design.md` §7.2–7.3)
 
-- [ ] **4.6 🔑 Feedback buttons** — `FeedbackButtons.tsx` ⏱ 10 min
+- [x] **4.6 🔑 Feedback buttons** — `FeedbackButtons.tsx` ⏱ 10 min
 
-- [ ] **4b.1 🔑 Connect to the real API** ⏱ 45 min — turn off mock mode, fix contract mismatches, test every state.
+- [x] **4b.1 🔑 Connect to the real API** ⏱ 45 min — turn off mock mode, fix contract mismatches, test every state.
   - **Check:** ask a PDF question and a lecture question in the browser; chips show correct badges; rating saves.
 
 ---
 
 ## Phase 5 — Frontend: Lectures, Flagged, Sources, Insights · ⏱ 3 h · P0
 
-- [ ] **5.1 🔑 Lectures list + upload** — `lectures/page.tsx`, `UploadCard` ⏱ 45 min
+- [x] **5.1 🔑 Lectures list + upload** — `lectures/page.tsx`, `UploadCard` ⏱ 45 min
   - Upload form (title, course, section, instructor, date), progress bar, status polling every 3 s showing *Preparing → Transcribing → Finding important moments → Ready*.
-- [ ] **5.2 🔑 Lecture detail** — `lectures/[id]/page.tsx`, `Transcript`, `FlaggedList` ⏱ 60 min
+- [x] **5.2 🔑 Lecture detail** — `lectures/[id]/page.tsx`, `Transcript`, `FlaggedList` ⏱ 60 min
   - Tabs Summary · Flagged · Transcript · Ask this lecture; `?t=` deep link scrolls and highlights; audio player seeks to the timestamp.
-- [ ] **5.3 Flagged page** — `flagged/page.tsx` ⏱ 25 min — grouped by lecture for the selected course.
-- [ ] **5.4 🔑 Sources: Documents tab** — `sources/page.tsx` ⏱ 30 min — table, add, delete.
-- [ ] **5.5 Sources: Insights tab** ⏱ 20 min — unanswered questions (with counts) and thumbs-down answers.
+- [x] **5.3 Flagged page** — `flagged/page.tsx` ⏱ 25 min — grouped by lecture for the selected course.
+- [x] **5.4 🔑 Sources: Documents tab** — `sources/page.tsx` ⏱ 30 min — table, add, delete.
+- [x] **5.5 Sources: Insights tab** ⏱ 20 min — unanswered questions (with counts) and thumbs-down answers.
 - **Check:** every page passes `design.md` §2 and §11 in light and dark at 360 px and 1440 px.
 
 ---
