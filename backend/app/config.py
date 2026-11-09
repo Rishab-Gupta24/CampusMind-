@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # Models
     llm_provider: str = "ollama"
     llm_model: str = "gemma4:e4b"
-    ollama_url: str = "http://localhost:11434"
+    ollama_url: str = "http://127.0.0.1:11434"  # not localhost: on Windows it tries IPv6 first (+2 s per call)
     embed_model: str = "bge-m3"
     embed_dim: int = 1024
     reranker_model: str = "BAAI/bge-reranker-v2-m3"

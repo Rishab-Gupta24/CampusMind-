@@ -521,7 +521,7 @@ SUPABASE_BUCKET=sources
 # Models
 LLM_PROVIDER=ollama          # ollama | gemini
 LLM_MODEL=gemma4:e4b
-OLLAMA_URL=http://localhost:11434
+OLLAMA_URL=http://127.0.0.1:11434   # not localhost (Windows IPv6 delay)
 EMBED_MODEL=bge-m3
 EMBED_DIM=1024
 RERANKER_MODEL=BAAI/bge-reranker-v2-m3
