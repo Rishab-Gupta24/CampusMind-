@@ -1,18 +1,20 @@
-"""Runs a whole upload as a background task: prepare → store → load/transcribe → chunk → embed → upsert.
+"""Runs a whole upload as a background task: prepare → store → load/transcribe → chunk → (flag) → embed → upsert.
 
 A source ends as `ready`, or `failed` with a short message users can read.
 """
 
+import asyncio
 import logging
 from pathlib import Path
 
 from app import db
 from app.config import get_settings
-from app.ingest import prepare
+from app.ingest import flagger, prepare
 from app.ingest.chunker import Chunk, chunk_lecture, chunk_pdf
+from app.ingest.lecture_notes import write_notes
 from app.ingest.pdf_loader import load_pdf, page_count
 from app.ingest.prepare import PrepareError
-from app.ingest.transcriber import transcribe
+from app.ingest.transcriber import Segment, transcribe
 from app.rag.embedder import EmbedError, embed_texts
 
 log = logging.getLogger(__name__)
@@ -38,11 +40,18 @@ def tmp_path(name: str) -> Path:
     return directory / name
 
 
-def _index(source_id: str, chunks: list[Chunk]) -> None:
+def _index(source_id: str, chunks: list[Chunk], flag_reasons: dict[str, str] | None = None) -> None:
     """Replace every chunk of a source. Deterministic ids keep re-uploads from duplicating."""
+    reasons = flag_reasons or {}
     vectors = embed_texts([c["content"] for c in chunks])
     rows = [
-        {**chunk, "source_id": source_id, "embedding": vector, "flagged": False, "flag_reason": None}
+        {
+            **chunk,
+            "source_id": source_id,
+            "embedding": vector,
+            "flagged": chunk["id"] in reasons,
+            "flag_reason": reasons.get(chunk["id"]),
+        }
         for chunk, vector in zip(chunks, vectors, strict=True)
     ]
     db.delete_chunks(source_id)
@@ -81,7 +90,33 @@ def process_document(source_id: str, upload_path: Path) -> None:
         prepare.cleanup(upload_path, compressed)
 
 
-def process_lecture(source_id: str, upload_path: Path) -> None:
+def _lecture_intelligence(source_id: str, title: str, segments: list[Segment], duration: float) -> None:
+    """Chunk → flag (cue + LLM) → embed → notes. Notes are best effort; flags and chunks are not."""
+    transcript = [{"start_s": s["start"], "end_s": s["end"], "text": s["text"]} for s in segments]
+    db.upload_json(transcript_storage_path(source_id), transcript)
+    chunks = chunk_lecture(source_id, segments)
+    moments = asyncio.run(flagger.detect(title, segments))
+    reasons = flagger.apply_to_chunks(chunks, moments)
+    _index(source_id, chunks, reasons)
+
+    notes: dict[str, object] = {"summary": "", "key_points": [], "formulas": []}
+    try:
+        notes = dict(asyncio.run(write_notes(title, segments)))
+    except Exception:
+        log.exception("Lecture notes failed for %s", source_id)
+    db.upsert_lecture_notes({"source_id": source_id, **notes, "flagged_moments": moments})
+    db.update_source(
+        source_id,
+        {
+            "status": "ready",
+            "error": None,
+            "duration_s": round(duration, 1),
+            "storage_path": audio_storage_path(source_id),
+        },
+    )
+
+
+def process_lecture(source_id: str, upload_path: Path, title: str) -> None:
     audio = tmp_path(f"{source_id}.opus")
     try:
         prepare.prepare_audio(upload_path, audio)
@@ -89,20 +124,27 @@ def process_lecture(source_id: str, upload_path: Path) -> None:
         segments, duration = transcribe(audio)
         if not segments:
             raise PrepareError("No speech was found in this recording.")
-        transcript = [{"start_s": s["start"], "end_s": s["end"], "text": s["text"]} for s in segments]
-        db.upload_json(transcript_storage_path(source_id), transcript)
-        chunks = chunk_lecture(source_id, segments)
-        _index(source_id, chunks)
-        db.update_source(
-            source_id,
-            {
-                "status": "ready",
-                "error": None,
-                "duration_s": round(duration, 1),
-                "storage_path": audio_storage_path(source_id),
-            },
-        )
+        _lecture_intelligence(source_id, title, segments, duration)
     except Exception as exc:  # noqa: BLE001 — every failure must end as status 'failed'
         _fail(source_id, exc)
     finally:
         prepare.cleanup(upload_path, audio)
+
+
+def reprocess_lecture(source_id: str) -> None:
+    """Re-run transcription, flags, embeddings and notes from the stored audio (no new upload)."""
+    source = db.get_source(source_id)
+    if source is None or source["type"] != "lecture":
+        raise ValueError(f"{source_id} is not a lecture")
+    audio = tmp_path(f"{source_id}.reprocess.opus")
+    try:
+        db.update_source(source_id, {"status": "processing", "error": None})
+        db.download_file(audio_storage_path(source_id), audio)
+        segments, duration = transcribe(audio)
+        if not segments:
+            raise PrepareError("No speech was found in this recording.")
+        _lecture_intelligence(source_id, source["title"], segments, duration)
+    except Exception as exc:  # noqa: BLE001 — every failure must end as status 'failed'
+        _fail(source_id, exc)
+    finally:
+        prepare.cleanup(audio)

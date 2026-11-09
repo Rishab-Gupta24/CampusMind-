@@ -47,19 +47,6 @@ def delete_chunks(source_id: str) -> None:
     get_client().table("chunks").delete().eq("source_id", source_id).execute()
 
 
-def flagged_chunks(source_id: str) -> list[Row]:
-    return (
-        get_client()
-        .table("chunks")
-        .select("id, content, start_s, end_s, flag_reason")
-        .eq("source_id", source_id)
-        .eq("flagged", True)
-        .order("start_s")
-        .execute()
-        .data
-    )
-
-
 # ---------- sources ----------
 
 
@@ -159,6 +146,10 @@ def upload_json(storage_path: str, data: object) -> None:
     _bucket().upload(storage_path, payload, {"content-type": "application/json", "upsert": "true"})
 
 
+def download_file(storage_path: str, local_path: Path) -> None:
+    local_path.write_bytes(_bucket().download(storage_path))
+
+
 def download_json(storage_path: str) -> Any:
     return json.loads(_bucket().download(storage_path))
 
@@ -171,3 +162,50 @@ def remove_files(paths: list[str]) -> None:
 def signed_url(storage_path: str) -> str | None:
     result = _bucket().create_signed_url(storage_path, SIGNED_URL_SECONDS)
     return result.get("signedURL") or result.get("signedUrl")
+
+
+# ---------- flagged moments, insights ----------
+
+
+def lecture_notes_for(source_ids: list[str]) -> dict[str, list[Row]]:
+    if not source_ids:
+        return {}
+    rows = (
+        get_client().table("lecture_notes").select("source_id, flagged_moments").in_("source_id", source_ids).execute()
+    ).data
+    return {r["source_id"]: r["flagged_moments"] or [] for r in rows}
+
+
+def list_unanswered(limit: int = 500) -> list[Row]:
+    return (
+        get_client()
+        .table("unanswered")
+        .select("question, scope, best_score, created_at")
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+        .data
+    )
+
+
+def list_thumbs_down(limit: int = 200) -> list[Row]:
+    rows = (
+        get_client()
+        .table("feedback")
+        .select("created_at, answers(id, question, answer)")
+        .eq("rating", -1)
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+        .data
+    )
+    return [
+        {
+            "answer_id": r["answers"]["id"],
+            "question": r["answers"]["question"],
+            "answer": r["answers"]["answer"],
+            "created_at": r["created_at"],
+        }
+        for r in rows
+        if r.get("answers")
+    ]
