@@ -47,12 +47,19 @@ def quiz_topic(question: str) -> str | None:
 
 
 def effective_course(question: str, course_id: str | None) -> str | None:
-    """Search all courses when the question names a course other than the selected one."""
-    if not course_id:
-        return None
+    """The course to search, judged from the selected course and any course code in the question.
+
+    - Names one known course and none is selected → search that course.
+    - Names a course other than the selected one (or several) → search all courses.
+    - Otherwise → the selected course.
+    """
     named = {f"{a.upper()} F{b}" for a, b in _COURSE_CODE.findall(question)}
     if not named:
         return course_id
+    by_code = {code: cid for cid, code in db.course_codes().items()}
+    if not course_id:
+        known = [by_code[c] for c in named if c in by_code]
+        return known[0] if len(named) == 1 and known else None
     selected = db.course_codes().get(course_id)
     return course_id if named == {selected} else None
 

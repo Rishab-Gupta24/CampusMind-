@@ -68,6 +68,9 @@ async def study_passages(
     lecture_id: str | None = None,
 ) -> list[Passage]:
     settings = get_settings()
+    from app.rag.answerer import effective_course  # local import: answerer imports this module's peers
+
+    course_id = await asyncio.to_thread(effective_course, topic, course_id)
     vector = await asyncio.to_thread(embed_query, topic)
     candidates = await asyncio.to_thread(
         retrieve, topic, vector, "lectures" if lecture_id else "all", course_id, lecture_id, settings.top_k_retrieve
