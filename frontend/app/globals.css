@@ -91,6 +91,11 @@ body {
   border-radius: 20px;
 }
 
+/* Popovers and panels: nested inside other glass, backdrop blur can't reach the page, so keep them nearly opaque. */
+.glass-strong {
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
+}
+
 @supports not (backdrop-filter: blur(1px)) {
   .glass {
     background: var(--surface);
