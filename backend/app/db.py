@@ -109,6 +109,27 @@ def delete_source(source_id: str) -> None:
     get_client().table("sources").delete().eq("id", source_id).execute()
 
 
+# ---------- answers, feedback, unanswered ----------
+
+
+def insert_answer(question: str, answer: str, source_chunk_ids: list[str], scope: str) -> str:
+    row = {"question": question, "answer": answer, "source_chunk_ids": source_chunk_ids, "scope": scope}
+    return get_client().table("answers").insert(row).execute().data[0]["id"]
+
+
+def answer_exists(answer_id: str) -> bool:
+    return bool(get_client().table("answers").select("id").eq("id", answer_id).limit(1).execute().data)
+
+
+def insert_feedback(answer_id: str, rating: int) -> None:
+    get_client().table("feedback").insert({"answer_id": answer_id, "rating": rating}).execute()
+
+
+def insert_unanswered(question: str, scope: str, best_score: float | None) -> None:
+    row = {"question": question, "scope": scope, "best_score": best_score}
+    get_client().table("unanswered").insert(row).execute()
+
+
 # ---------- lecture notes ----------
 
 
