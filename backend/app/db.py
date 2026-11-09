@@ -271,3 +271,19 @@ def list_events(
     if not include_suggested:
         query = query.eq("status", "confirmed")
     return query.execute().data
+
+
+INTERRUPTED = "Processing was interrupted because the server restarted. Upload the file again."
+
+
+def fail_interrupted() -> int:
+    """Mark sources left in 'processing' by a previous server run as failed. Returns how many."""
+    rows = (
+        get_client()
+        .table("sources")
+        .update({"status": "failed", "stage": None, "error": INTERRUPTED})
+        .eq("status", "processing")
+        .execute()
+        .data
+    )
+    return len(rows)

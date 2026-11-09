@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app import db
 from app.api import ask, catalog, documents, events, feedback, flagged, health, insights, lectures, study
 from app.config import get_settings
 from app.db import NotConfiguredError
@@ -26,6 +27,13 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     """Load the reranker and warm the LLM in the background so the first question starts fast."""
 
     async def warm() -> None:
+        try:
+            # Background uploads die with the process: anything still "processing" was interrupted.
+            stuck = await asyncio.to_thread(db.fail_interrupted)
+            if stuck:
+                log.warning("Marked %d interrupted upload(s) as failed", stuck)
+        except Exception:
+            log.exception("Could not check for interrupted uploads")
         try:
             await asyncio.to_thread(reranker.load)
             provider = get_provider()
