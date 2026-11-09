@@ -182,63 +182,63 @@ flowchart LR
     G -->|"ok"| PB["priority boosts"] --> LLM["LLM stream"] --> CV["citation check"] --> OUT["SSE to UI"]
 ```
 
-- [ ] **2.1 🔑 LLM provider** — `llm/base.py`, `llm/ollama_provider.py` ⏱ 20 min
+- [x] **2.1 🔑 LLM provider** — `llm/base.py`, `llm/ollama_provider.py` ⏱ 20 min
   - `generate(messages, **opts) -> str`, `stream(messages, **opts) -> AsyncIterator[str]`; temperature 0.1 for answers.
   - **Check:** a test script streams tokens from Ollama.
 
-- [ ] **2.2 🔑 Retriever** — `rag/retriever.py` ⏱ 25 min
+- [x] **2.2 🔑 Retriever** — `rag/retriever.py` ⏱ 25 min
   - Call `rpc('hybrid_search', …)` with scope → `filter_type`, course → `filter_course`; then fetch chunk rows joined with source, section, instructor.
   - `lecture_id` scope → filter results to that source.
   - **Check:** "makeup test" query returns the right regulation chunk in the top 5.
 
-- [ ] **2.3 🔑 Reranker** — `rag/reranker.py` ⏱ 20 min
+- [x] **2.3 🔑 Reranker** — `rag/reranker.py` ⏱ 20 min
   - `CrossEncoder(RERANKER_MODEL)` loaded at startup; score 20 pairs; return sorted with raw scores.
   - **Check:** reranked top 1 is correct for 4 of 5 sample questions.
 
-- [ ] **2.4 🔑 Priority boosts** — `rag/priority.py` ⏱ 20 min
+- [x] **2.4 🔑 Priority boosts** — `rag/priority.py` ⏱ 20 min
   - Apply `BOOST_*` from config (`Architecture.md` §3.3); return `final_score` **and** `badges[]` per passage.
   - **Check:** unit test — boosts re-order ties, badges match the boosts applied, gate still uses raw score.
 
-- [ ] **2.5 🔑 Prompts** — `rag/prompts.py` ⏱ 20 min
+- [x] **2.5 🔑 Prompts** — `rag/prompts.py` ⏱ 20 min
   - `ANSWER_SYSTEM`: answer only from numbered passages; cite like `[2]`; if passages don't answer it, say so; ≤ 150 words; mention instructor flags when present; reply in the question's language.
   - `ANSWER_USER`: question + passages formatted `[n] (title · page/time · badges) text`.
   - **Check:** prompt renders correctly for a PDF and a lecture passage.
 
-- [ ] **2.6 🔑 Answerer** — `rag/answerer.py` ⏱ 35 min
+- [x] **2.6 🔑 Answerer** — `rag/answerer.py` ⏱ 35 min
   - Gate: best raw score < `MIN_RELEVANCE` → insert `unanswered`, emit `not_found`, **no LLM call**.
   - Else: top 5 by `final_score` → stream LLM → collect full text → strip any `[n]` not in 1..5 → insert `answers` → emit `sources` (with excerpt + badges) and `done {answer_id}`.
   - **Check:** an invented `[9]` is removed; out-of-scope question logs to `unanswered`.
 
-- [ ] **2.7 🔑 Ask + feedback endpoints** — `api/ask.py`, `api/feedback.py` ⏱ 25 min
+- [x] **2.7 🔑 Ask + feedback endpoints** — `api/ask.py`, `api/feedback.py` ⏱ 25 min
   - SSE events: `token`, `sources`, `not_found`, `done`, `error`.
   - `POST /api/feedback {answer_id, rating}`.
   - **Check:** `curl -N` streams a cited answer; feedback row appears.
 
-- [ ] **2.8 🔑 Eval runner** — `eval/run_eval.py` ⏱ 25 min
+- [x] **2.8 🔑 Eval runner** — `eval/run_eval.py` ⏱ 25 min
   - For each question: run the pipeline without streaming; mark correct if the expected source is cited; out-of-scope correct if refused; time to first token.
   - Print a table; write the score into `memory.md` §5.
   - **Check:** baseline recorded.
 
-- [ ] **2.9 🔑 Tune** ⏱ 30 min
+- [x] **2.9 🔑 Tune** ⏱ 30 min
   - Adjust chunk size, `MIN_RELEVANCE`, `TOP_K_*`, prompt wording until **≥ 13/15 correct and 3/3 refused**. Log each attempt in `memory.md`.
 
 ---
 
 ## Phase 3 — Lecture intelligence (backend) · ⏱ 1 h 30 min · P0
 
-- [ ] **3.1 🔑 Flagged moments** — `ingest/flagger.py` ⏱ 40 min
+- [x] **3.1 🔑 Flagged moments** — `ingest/flagger.py` ⏱ 40 min
   - Cue list (config or constant): "come in the exam", "will be asked", "important", "note this down", "remember this", "asked last year", "for the quiz", "for compre", "for midsem".
   - Step 1: case-insensitive match on transcript segments → candidates.
   - Step 2: LLM (`FLAG_CHECK` prompt) with ±30 s context → `{is_flag: bool, reason: str}` as JSON.
   - Mark matching chunks `flagged = true`, `flag_reason = reason`. Run inside the pipeline before embedding.
   - **Check:** both planted cues in the demo lecture are flagged; ≤ 1 false flag.
 
-- [ ] **3.2 🔑 Lecture notes** — `ingest/lecture_notes.py` ⏱ 30 min
+- [x] **3.2 🔑 Lecture notes** — `ingest/lecture_notes.py` ⏱ 30 min
   - From the transcript: 5-line summary, 4–8 key points, formulas (LaTeX-free plain text), saved to `lecture_notes`.
   - Long transcripts: summarise in parts, then combine.
   - **Check:** notes for the demo lecture are accurate when read against the transcript.
 
-- [ ] **3.3 Flagged endpoint** — `api/flagged.py` ⏱ 15 min
+- [x] **3.3 Flagged endpoint** — `api/flagged.py` ⏱ 15 min
   - `GET /api/flagged?course_id=` → moments with lecture title, timestamp, reason, instructor + role.
   - Include `flagged[]` and a signed `audio_url` in `GET /api/lectures/{id}`.
   - **Check:** returns the two demo flags.
@@ -285,6 +285,7 @@ flowchart LR
 ## Phase 6 — Round 1 readiness · ⏱ 1 h 30 min · P0
 
 - [ ] **6.1 🔑 Load demo data** into Supabase: all D.1 documents + D.2 lecture through the real upload flow. Confirm all `ready`.
+  - Done 2026-11-09: PHY F111 (`…c3`) and PHY F110 (`…c4`) are in `supabase/seed.sql`; physics test docs re-tagged. Upload new physics docs with these `course_id`s.
 - [ ] **6.2 🔑 Final eval run**; record in `memory.md`. Must meet PRD §10 targets.
 - [ ] **6.3 🔑 Rehearse** the PRD §11 demo script 3 times on the demo laptop; time it; fix anything slow.
 - [ ] **6.4 🔑 Backups:** screen-record the full demo; phone hotspot tested; Supabase dashboard opened (not paused).
