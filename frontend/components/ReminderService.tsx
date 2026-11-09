@@ -41,6 +41,30 @@ export function remindersEnabled(): boolean {
   }
 }
 
+/** System notification through the service worker when installed (works on phones), else the page API. */
+export function notify(title: string, body: string, tag: string): void {
+  const options = { body, tag, icon: "/icons/icon-192.png", badge: "/icons/icon-192.png" };
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistration().then((reg) => {
+      if (reg) {
+        reg.showNotification(title, options).catch(() => undefined);
+        return;
+      }
+      try {
+        new Notification(title, options);
+      } catch {
+        // The subscribed calendar still reminds.
+      }
+    });
+    return;
+  }
+  try {
+    new Notification(title, options);
+  } catch {
+    // The subscribed calendar still reminds.
+  }
+}
+
 function check(events: CalendarEvent[]): void {
   if (!remindersEnabled()) return;
   const now = Date.now();
@@ -57,11 +81,7 @@ function check(events: CalendarEvent[]): void {
     sent.add(key);
     const title = `${TYPE_LABEL[e.type]}: ${e.title}`;
     const body = `${e.course_code ? `${e.course_code} · ` : ""}${timeLeft(left)}${e.location ? ` · ${e.location}` : ""}`;
-    try {
-      new Notification(title, { body, tag: key });
-    } catch {
-      // Some browsers only allow notifications from a service worker; the subscribed calendar still reminds.
-    }
+    notify(title, body, key);
   }
   writeSent(sent);
 }

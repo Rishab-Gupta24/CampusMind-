@@ -5,7 +5,7 @@ import { Bell, BellOff, CalendarPlus, Check, ChevronLeft, ChevronRight, Copy, Pl
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { PageTitle } from "@/components/PageTitle";
-import { ENABLED_KEY, remindersEnabled } from "@/components/ReminderService";
+import { ENABLED_KEY, notify, remindersEnabled } from "@/components/ReminderService";
 import { EmptyNote, ErrorNote, LoadingDots, inputClass } from "@/components/ui";
 import { api, type CalendarEvent, type EventType } from "@/lib/api";
 import { usePrefs } from "@/lib/prefs";
@@ -195,7 +195,7 @@ function Reminders({ feedUrl }: { feedUrl: string }) {
     }
     setOn(true);
     setNote("Reminders on: 1 day, 2 hours and 30 minutes before deadlines, while CampusMind is open.");
-    new Notification("CampusMind reminders are on", { body: "You'll be reminded before deadlines and exams." });
+    notify("CampusMind reminders are on", "You'll be reminded before deadlines and exams.", "reminders-on");
   };
 
   const webcal = feedUrl.replace(/^https?:/, "webcal:");
