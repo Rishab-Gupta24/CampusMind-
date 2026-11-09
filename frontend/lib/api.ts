@@ -8,7 +8,7 @@ const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== "false";
 
 export type Role = "ic" | "hod" | "instructor";
 export type Scope = "all" | "docs" | "lectures";
-export type SourceKind = "campus" | "handout" | "lecture";
+export type SourceKind = "campus" | "handout" | "material" | "lecture";
 export type Status = "processing" | "ready" | "failed";
 export type BadgeName = "Official" | "IC" | "HOD" | "Flagged" | "Your section";
 

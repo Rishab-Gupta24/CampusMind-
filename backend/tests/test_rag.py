@@ -104,3 +104,26 @@ def test_prompt_renders_pdf_and_lecture_passages() -> None:
     assert rendered.startswith("[1] (Academic Regulations · p. 12 · Official)\ntext of x")
     assert "[2] (MATH F113 · Lecture 4 · 12:40 · Dr. Asha Demo (IC) · Flagged, IC · flag reason: Exam hint" in rendered
     assert format_time(3725) == "1:02:05"
+
+
+# ---------- passage selection ----------
+
+
+def test_select_caps_per_source_and_keeps_best_official() -> None:
+    from app.rag.answerer import select_passages
+
+    material = [_passage(f"pyq{i}", 0.99 - i * 0.01, kind="material", source_id=f"s{i // 3}") for i in range(9)]
+    official = _passage("handout", 0.40, kind="handout", source_id="h")
+    chosen = select_passages([*material, official], k=5)
+    ids = [p["chunk_id"] for p in chosen]
+    assert len(chosen) == 5
+    assert "handout" in ids
+    sources = [p["source_id"] for p in chosen]
+    assert all(sources.count(s) <= 2 for s in set(sources))
+
+
+def test_select_without_official_is_plain_top_k() -> None:
+    from app.rag.answerer import select_passages
+
+    passages = [_passage(f"c{i}", 0.9 - i * 0.1, source_id=f"s{i}") for i in range(7)]
+    assert [p["chunk_id"] for p in select_passages(passages, k=5)] == ["c0", "c1", "c2", "c3", "c4"]

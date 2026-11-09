@@ -93,9 +93,36 @@ def _source_event(n: int, p: Passage) -> dict[str, Any]:
     }
 
 
+MAX_PER_SOURCE = 2
+OFFICIAL_KINDS = ("campus", "handout")
+
+
+def select_passages(boosted: list[Passage], k: int) -> list[Passage]:
+    """Top k by final score, at most MAX_PER_SOURCE per source, always keeping the best official passage.
+
+    Every passage here already passed the relevance gate. The rule is visible: official passages carry
+    the Official badge, and the prompt tells the model to prefer them over older course material.
+    """
+    chosen: list[Passage] = []
+    per_source: dict[str, int] = {}
+    for p in boosted:
+        if per_source.get(p["source_id"], 0) >= MAX_PER_SOURCE:
+            continue
+        chosen.append(p)
+        per_source[p["source_id"]] = per_source.get(p["source_id"], 0) + 1
+        if len(chosen) == k:
+            break
+    official = next((p for p in boosted if p.get("kind") in OFFICIAL_KINDS), None)
+    if official is not None and official not in chosen:
+        if len(chosen) == k:
+            chosen.pop()
+        chosen.append(official)
+    return chosen
+
+
 async def _find_passages(
     question: str, scope: Scope, course_id: str | None, section_id: str | None, lecture_id: str | None
-) -> tuple[list[Passage], float]:
+) -> tuple[list[Passage], float, list[Passage]]:
     settings = get_settings()
     vector = await asyncio.to_thread(embed_query, question)
     candidates = await asyncio.to_thread(
@@ -106,7 +133,7 @@ async def _find_passages(
     # Gate on the raw score first; boosts only re-order what already passed.
     relevant = [p for p in ranked if p["rerank_score"] >= settings.min_relevance]
     boosted = apply_boosts(relevant, section_id)
-    return boosted[: settings.top_k_final], best
+    return select_passages(boosted, settings.top_k_final), best, ranked
 
 
 async def answer(
@@ -125,7 +152,7 @@ async def answer(
             await asyncio.to_thread(db.insert_unanswered, question, scope, round(best, 4))
 
     try:
-        passages, best = await _find_passages(question, scope, course_id, section_id, lecture_id)
+        passages, best, _ranked = await _find_passages(question, scope, course_id, section_id, lecture_id)
     except EmbedError as exc:
         yield {"event": "error", "data": {"error": str(exc)}}
         return

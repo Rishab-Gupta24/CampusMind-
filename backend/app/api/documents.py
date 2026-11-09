@@ -31,7 +31,7 @@ async def upload_document(
     background: BackgroundTasks,
     file: Annotated[UploadFile, File()],
     title: Annotated[str, Form(min_length=1, max_length=200)],
-    kind: Annotated[Literal["campus", "handout"], Form()],
+    kind: Annotated[Literal["campus", "handout", "material"], Form()],
     course_id: Annotated[uuid.UUID | None, Form()] = None,
     source_date: Annotated[date | None, Form()] = None,
 ) -> dict[str, str]:
