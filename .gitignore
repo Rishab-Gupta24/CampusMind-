@@ -1,0 +1,10 @@
+.env
+.env.local
+backend/tmp/
+node_modules/
+.next/
+__pycache__/
+.venv/
+*.opus
+*.mp4
+*.mp3
