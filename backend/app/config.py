@@ -28,9 +28,9 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-flash-latest"
 
     # Retrieval
-    top_k_retrieve: int = 20
+    top_k_retrieve: int = 40  # tuned in 2.9: GPU rerank of 40 ≈ 0.6 s
     top_k_final: int = 5
-    min_relevance: float = 0.3
+    min_relevance: float = 0.02  # tuned on eval: off-topic ≤ 0.004, hard-but-relevant ≥ 0.04 (memory.md)
     boost_official: float = 0.04
     boost_senior: float = 0.04
     boost_flagged: float = 0.05
