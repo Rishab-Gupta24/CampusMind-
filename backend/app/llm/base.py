@@ -19,8 +19,10 @@ class LLMError(Exception):
 
 class LLMProvider(ABC):
     @abstractmethod
-    async def generate(self, messages: list[Message], temperature: float = 0.1, max_tokens: int = 512) -> str:
-        """Return the whole reply."""
+    async def generate(
+        self, messages: list[Message], temperature: float = 0.1, max_tokens: int = 512, json_mode: bool = False
+    ) -> str:
+        """Return the whole reply. `json_mode` asks the model for a single JSON object."""
 
     @abstractmethod
     def stream(self, messages: list[Message], temperature: float = 0.1, max_tokens: int = 512) -> AsyncIterator[str]:

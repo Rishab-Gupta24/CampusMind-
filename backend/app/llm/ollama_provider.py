@@ -25,10 +25,15 @@ class OllamaProvider(LLMProvider):
             "options": {"temperature": temperature, "num_predict": max_tokens, "num_ctx": 8192},
         }
 
-    async def generate(self, messages: list[Message], temperature: float = 0.1, max_tokens: int = 512) -> str:
+    async def generate(
+        self, messages: list[Message], temperature: float = 0.1, max_tokens: int = 512, json_mode: bool = False
+    ) -> str:
+        payload = self._payload(messages, temperature, max_tokens, False)
+        if json_mode:
+            payload["format"] = "json"
         try:
             async with httpx.AsyncClient(base_url=self.base_url, timeout=300) as client:
-                res = await client.post("/api/chat", json=self._payload(messages, temperature, max_tokens, False))
+                res = await client.post("/api/chat", json=payload)
                 res.raise_for_status()
         except httpx.HTTPError as exc:
             raise LLMError(UNREACHABLE) from exc
@@ -61,6 +66,8 @@ class OllamaProvider(LLMProvider):
         """Load the model into memory so the first real answer starts fast."""
         try:
             async with httpx.AsyncClient(base_url=self.base_url, timeout=300) as client:
-                await client.post("/api/generate", json={"model": self.model, "keep_alive": "30m"})
+                # Same options as real requests: a different num_ctx would force a full reload later.
+                payload = self._payload([{"role": "user", "content": "ok"}], 0.0, 1, False)
+                await client.post("/api/chat", json=payload)
         except httpx.HTTPError:
             pass
