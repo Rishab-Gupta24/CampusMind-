@@ -1,0 +1,23 @@
+{
+  "_note": "PROVISIONAL eval set written from the documents loaded on 2026-11-09. Replace with the real D.3 set (10 PDF + 5 lecture + 3 out-of-scope). Questions 14-15 use the TEST lecture, which must be swapped for the real demo lecture.",
+  "questions": [
+    {"id": "math-compre-weight", "question": "What is the weightage of the comprehensive exam in MATH F113?", "course": "MATH F113", "expect": [{"title": "MATH F113 Handout", "page": 2}]},
+    {"id": "math-midsem-open", "question": "Is the MATH F113 mid semester exam open book?", "course": "MATH F113", "expect": [{"title": "MATH F113 Handout", "page": 2}]},
+    {"id": "math-textbook", "question": "Which textbook do we follow for Probability and Statistics?", "course": "MATH F113", "expect": [{"title": "MATH F113 Handout", "page": 1}]},
+    {"id": "math-ic", "question": "Who is the instructor-in-charge of MATH F113?", "course": "MATH F113", "expect": [{"title": "MATH F113 Handout", "page": 1}]},
+    {"id": "math-attendance", "question": "What minimum attendance do I need to sit the MATH F113 comprehensive exam?", "course": "MATH F113", "expect": [{"title": "MATH F113 Handout", "page": 3}]},
+    {"id": "math-makeup", "question": "I missed an evaluation component in MATH F113. Can I get a makeup?", "course": "MATH F113", "expect": [{"title": "MATH F113 Handout", "page": 3}]},
+    {"id": "math-lectures", "question": "How many lectures are planned for MATH F113?", "course": "MATH F113", "expect": [{"title": "MATH F113 Handout", "page": 2}]},
+    {"id": "phy-quiz1", "question": "What is the weightage of Quiz-1 in PHY F111?", "expect": [{"title": "PHY F111 Handout", "page": 2}]},
+    {"id": "phy-compre-date", "question": "When is the PHY F111 comprehensive exam?", "expect": [{"title": "PHY F111 Handout", "page": 2}]},
+    {"id": "phy-textbooks", "question": "What are the textbooks for Mechanics, Oscillations and Waves?", "expect": [{"title": "PHY F111 Handout", "page": 1}]},
+    {"id": "lab-ic", "question": "Who is the instructor-in-charge of the Physics Laboratory course?", "expect": [{"title": "Physics Lab", "page": 1}]},
+    {"id": "lab-compre", "question": "How much is the physics lab comprehensive exam worth?", "expect": [{"title": "Physics Lab", "page": 2}]},
+    {"id": "lab-steiner", "question": "Which physics lab experiment verifies the parallel axes theorem?", "expect": [{"title": "Physics Lab"}, {"title": "Physics Lab Manual"}]},
+    {"id": "lec-bayes-ic", "question": "What did the IC say about Bayes' theorem?", "course": "MATH F113", "scope": "lectures", "expect": [{"title": "TEST Lecture 4 - Bayes theorem", "start_s": [0, 95]}]},
+    {"id": "lec-disease", "question": "In the lecture's medical test example, what is the chance a person who tests positive has the disease?", "course": "MATH F113", "scope": "lectures", "expect": [{"title": "TEST Lecture 4 - Bayes theorem"}]},
+    {"id": "oos-cricket", "question": "Who won the cricket world cup in 2023?", "expect": "refuse"},
+    {"id": "oos-mess", "question": "What is on the hostel mess menu this Friday?", "expect": "refuse"},
+    {"id": "oos-visa", "question": "How do I apply for a US student visa?", "expect": "refuse"}
+  ]
+}
