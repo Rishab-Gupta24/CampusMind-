@@ -158,3 +158,14 @@ Number of cards: {count}
 
 Passages:
 {passages}"""
+
+
+# ---------- OCR (scanned pages, handwritten notes) ----------
+
+OCR_PROMPT = r"""Transcribe everything on this page exactly as written: printed text, handwriting, headers, margins, marks, tables and labels.
+- Keep the reading order and line breaks.
+- Write maths in LaTeX: inline $...$, display $$...$$.
+- Write tables as Markdown tables.
+- Describe a drawing in one short line in square brackets, e.g. [Sketch: cardioid with labelled points].
+- Write [illegible] for anything you cannot read. Never guess or add content that is not on the page.
+Output only the transcription."""

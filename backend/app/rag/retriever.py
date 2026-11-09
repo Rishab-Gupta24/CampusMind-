@@ -21,6 +21,7 @@ class Passage(TypedDict, total=False):
     end_s: float | None
     flagged: bool
     flag_reason: str | None
+    ocr: bool
     source_id: str
     title: str
     type: str
@@ -66,7 +67,7 @@ def retrieve(
     rows = (
         client.table("chunks")
         .select(
-            "id, content, page, start_s, end_s, flagged, flag_reason, source_id, "
+            "id, content, page, start_s, end_s, flagged, flag_reason, ocr, source_id, "
             "sources(title, type, kind, course_id, section_id, instructors(name, role), courses(code))"
         )
         .in_("id", list(rrf))
@@ -86,6 +87,7 @@ def retrieve(
                 "end_s": row["end_s"],
                 "flagged": row["flagged"],
                 "flag_reason": row["flag_reason"],
+                "ocr": row.get("ocr", False),
                 "source_id": row["source_id"],
                 "title": source.get("title", ""),
                 "type": source.get("type", ""),

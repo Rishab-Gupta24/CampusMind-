@@ -20,12 +20,13 @@ PAUSE_S = 1.5
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 
 
-class Chunk(TypedDict):
+class Chunk(TypedDict, total=False):
     id: str
     content: str
     page: int | None
     start_s: float | None
     end_s: float | None
+    ocr: bool
 
 
 def _split_long(paragraph: str, max_words: int) -> list[str]:
@@ -83,6 +84,7 @@ def chunk_pdf(
                     "page": page["page"],
                     "start_s": None,
                     "end_s": None,
+                    "ocr": bool(page.get("ocr")),
                 }
             )
     return chunks

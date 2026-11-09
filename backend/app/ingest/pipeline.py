@@ -12,7 +12,8 @@ from app.config import get_settings
 from app.ingest import flagger, prepare
 from app.ingest.chunker import Chunk, chunk_lecture, chunk_pdf
 from app.ingest.lecture_notes import write_notes
-from app.ingest.pdf_loader import load_pdf, page_count
+from app.ingest.ocr import OCRError, image_to_pdf
+from app.ingest.pdf_loader import load_pdf_with_ocr, page_count
 from app.ingest.prepare import PrepareError
 from app.ingest.transcriber import Segment, transcribe
 from app.rag.embedder import EmbedError, embed_texts
@@ -51,6 +52,7 @@ def _index(source_id: str, chunks: list[Chunk], flag_reasons: dict[str, str] | N
             "embedding": vector,
             "flagged": chunk["id"] in reasons,
             "flag_reason": reasons.get(chunk["id"]),
+            "ocr": bool(chunk.get("ocr")),
         }
         for chunk, vector in zip(chunks, vectors, strict=True)
     ]
@@ -59,19 +61,32 @@ def _index(source_id: str, chunks: list[Chunk], flag_reasons: dict[str, str] | N
 
 
 def _fail(source_id: str, exc: Exception) -> None:
-    safe = isinstance(exc, PrepareError | EmbedError)
+    safe = isinstance(exc, PrepareError | EmbedError | OCRError)
     if not safe:
         log.exception("Pipeline failed for source %s", source_id)
     db.update_source(source_id, {"status": "failed", "stage": None, "error": str(exc) if safe else GENERIC_FAILURE})
 
 
+IMAGE_TYPES = {".jpg", ".jpeg", ".png", ".webp"}
+
+
 def process_document(source_id: str, upload_path: Path) -> None:
     compressed = tmp_path(f"{source_id}.compressed.pdf")
+    converted = tmp_path(f"{source_id}.image.pdf")
     try:
-        stored = prepare.prepare_pdf(upload_path, compressed)
-        pages = load_pdf(stored)
+        db.update_source(source_id, {"stage": "reading"})
+        source_path = upload_path
+        if upload_path.suffix.lower() in IMAGE_TYPES:
+            source_path = image_to_pdf(upload_path, converted)
+        stored = prepare.prepare_pdf(source_path, compressed)
+
+        def progress(done: int, total: int) -> None:
+            db.update_source(source_id, {"stage": f"ocr:{done}/{total}"})
+
+        pages = load_pdf_with_ocr(stored, progress)
         if not pages:
-            raise PrepareError("No text was found in this PDF. Scanned PDFs are not supported yet.")
+            raise PrepareError("No readable text was found in this file.")
+        db.update_source(source_id, {"stage": "indexing"})
         db.upload_file(pdf_storage_path(source_id), stored, "application/pdf")
         chunks = chunk_pdf(source_id, pages)
         _index(source_id, chunks)
@@ -79,6 +94,7 @@ def process_document(source_id: str, upload_path: Path) -> None:
             source_id,
             {
                 "status": "ready",
+                "stage": None,
                 "error": None,
                 "pages": page_count(stored),
                 "storage_path": pdf_storage_path(source_id),
@@ -87,7 +103,7 @@ def process_document(source_id: str, upload_path: Path) -> None:
     except Exception as exc:  # noqa: BLE001 — every failure must end as status 'failed'
         _fail(source_id, exc)
     finally:
-        prepare.cleanup(upload_path, compressed)
+        prepare.cleanup(upload_path, compressed, converted)
 
 
 def _lecture_intelligence(source_id: str, title: str, segments: list[Segment], duration: float) -> None:

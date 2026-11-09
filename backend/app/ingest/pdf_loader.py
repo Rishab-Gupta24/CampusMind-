@@ -2,19 +2,24 @@
 
 import re
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 from typing import TypedDict
 
 import pymupdf
+
+from app.config import get_settings
+from app.ingest.ocr import needs_ocr, render_page, transcribe_image
 
 REPEAT_SHARE = 0.6  # a line on more than 60% of pages is a header or footer
 _DIGITS = re.compile(r"\d+")
 _SPACES = re.compile(r"[ \t ]+")
 
 
-class PdfPage(TypedDict):
+class PdfPage(TypedDict, total=False):
     text: str
     page: int
+    ocr: bool
 
 
 def _line_key(line: str) -> str:
@@ -55,8 +60,26 @@ def load_pdf(path: Path) -> list[PdfPage]:
                 kept.append(" ".join(lines))
         text = "\n\n".join(kept).strip()
         if text:
-            result.append({"text": text, "page": number})
+            result.append({"text": text, "page": number, "ocr": False})
     return result
+
+
+def load_pdf_with_ocr(path: Path, on_progress: Callable[[int, int], None] | None = None) -> list[PdfPage]:
+    """Text pages as usual; pages without a text layer (scans, handwriting) are read by OCR."""
+    settings = get_settings()
+    pages = {p["page"]: p for p in load_pdf(path)}
+    with pymupdf.open(path) as doc:
+        scanned = [i for i in range(doc.page_count) if needs_ocr(doc[i].get_text())]
+        if not settings.ocr_enabled:
+            scanned = []
+        scanned = scanned[: settings.ocr_max_pages]
+        for done, index in enumerate(scanned, start=1):
+            if on_progress:
+                on_progress(done, len(scanned))
+            text = transcribe_image(render_page(doc, index))
+            if text and text.strip().lower() not in ("[illegible]", ""):
+                pages[index + 1] = {"text": text, "page": index + 1, "ocr": True}
+    return [pages[n] for n in sorted(pages)]
 
 
 def page_count(path: Path) -> int:

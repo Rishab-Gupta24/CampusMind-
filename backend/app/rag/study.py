@@ -153,6 +153,7 @@ def source_of(p: Passage, exam: str = "", number: str = "") -> dict[str, Any]:
         "badges": p.get("badges", []),
         "flag_reason": p.get("flag_reason"),
         "instructor": p.get("instructor"),
+        "ocr": bool(p.get("ocr")),
         "n": 0,
     }
 

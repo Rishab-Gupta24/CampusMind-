@@ -21,6 +21,7 @@ def _document_out(row: db.Row) -> dict[str, object]:
         "pages": row["pages"],
         "source_date": row["source_date"],
         "status": row["status"],
+        "stage": row.get("stage"),
         "error": row["error"],
         "created_at": row["created_at"],
     }
@@ -35,8 +36,9 @@ async def upload_document(
     course_id: Annotated[uuid.UUID | None, Form()] = None,
     source_date: Annotated[date | None, Form()] = None,
 ) -> dict[str, str]:
-    if Path(file.filename or "").suffix.lower() != ".pdf":
-        raise HTTPException(status_code=415, detail="Only PDF files can be added as documents.")
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix != ".pdf" and suffix not in pipeline.IMAGE_TYPES:
+        raise HTTPException(status_code=415, detail="Add a PDF, or a photo or scan (jpg or png) of notes.")
 
     title = title.strip()
     course = str(course_id) if course_id else None
@@ -56,7 +58,7 @@ async def upload_document(
     else:
         source_id = db.insert_source(fields)["id"]
 
-    upload_path = pipeline.tmp_path(f"{source_id}.upload.pdf")
+    upload_path = pipeline.tmp_path(f"{source_id}.upload{suffix}")
     try:
         await save_upload(file, upload_path)
     except HTTPException:

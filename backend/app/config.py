@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     boost_flagged: float = 0.05
     boost_section: float = 0.03
 
+    # OCR for scanned pages and handwritten notes (vision model via Ollama; empty = LLM_MODEL)
+    ocr_enabled: bool = True
+    ocr_model: str = ""
+    ocr_dpi: int = 150
+    ocr_max_pages: int = 80
+
     # Uploads
     max_upload_mb: int = 200
     pdf_compress_over_mb: int = 20

@@ -143,6 +143,7 @@ def _source_event(n: int, p: Passage) -> dict[str, Any]:
         "badges": p.get("badges", []),
         "flag_reason": p.get("flag_reason"),
         "instructor": p.get("instructor"),
+        "ocr": bool(p.get("ocr")),
     }
 
 
