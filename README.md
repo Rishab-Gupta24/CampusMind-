@@ -55,6 +55,8 @@ ollama pull gemma4:e4b
 ollama pull bge-m3
 ```
 
+Ollama must keep **both** models loaded, or every question reloads the LLM (~25 s). Set the environment variable `OLLAMA_MAX_LOADED_MODELS=2` (Windows: System → Environment Variables) and restart Ollama.
+
 **2. Backend** — copy `backend/.env.example` to `backend/.env` and fill in `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (never commit this file).
 
 ```bash
@@ -62,6 +64,12 @@ cd backend
 python3.12 -m venv .venv                         # Windows: py -3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt        # Windows: .venv\Scripts\pip install -r requirements.txt
 .venv/bin/uvicorn app.main:app --reload          # Windows: .venv\Scripts\uvicorn app.main:app --reload
+```
+
+**NVIDIA GPU (recommended):** the reranker is ~20x faster on a GPU. After installing requirements, swap in the CUDA build of PyTorch:
+
+```bash
+.venv/bin/pip install --force-reinstall --no-deps torch --index-url https://download.pytorch.org/whl/cu130
 ```
 
 Check: <http://localhost:8000/api/health> shows `"ollama": true, "supabase": true`.
