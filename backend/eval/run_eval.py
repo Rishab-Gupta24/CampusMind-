@@ -47,7 +47,9 @@ def matches(source: dict[str, Any], expect: dict[str, Any]) -> bool:
 
 async def run_one(q: dict[str, Any], courses: dict[str, str]) -> dict[str, Any]:
     kwargs = {"scope": q.get("scope", "all"), "course_id": courses.get(q.get("course", "")), "save": False}
-    passages, best = await answerer._find_passages(q["question"], kwargs["scope"], kwargs["course_id"], None, None)
+    _final, best, passages = await answerer._find_passages(
+        q["question"], kwargs["scope"], kwargs["course_id"], None, None
+    )
     result = await answerer.answer_once(q["question"], **kwargs)
     expect = q["expect"]
     if expect == "refuse":
@@ -89,6 +91,7 @@ def record(row: str) -> None:
 
 
 async def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8")  # Windows console defaults to cp1252
     parser = argparse.ArgumentParser()
     parser.add_argument("--record", metavar="NOTE", help="append the score row to docs/memory.md")
     parser.add_argument("--only", help="comma-separated question ids")
