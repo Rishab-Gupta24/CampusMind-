@@ -139,3 +139,9 @@ def test_streaming_math_split_across_pieces() -> None:
     f = CitationFilter(valid=2)
     out = "".join(f.feed(p) for p in ["Use $", r"$P(A) \in [0,", " 1]$", "$ here [1] and [5]."]) + f.flush()
     assert out == r"Use $$P(A) \in [0, 1]$$ here [1] and ."
+
+
+def test_clean_text_removes_nul_and_control_chars() -> None:
+    from app.ingest.pdf_loader import clean_text
+
+    assert clean_text("Calc\x00ulus\x07 cheat\tsheet\nline") == "Calculus cheat\tsheet\nline"

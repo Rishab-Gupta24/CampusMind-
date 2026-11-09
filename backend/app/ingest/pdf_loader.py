@@ -12,6 +12,15 @@ from app.config import get_settings
 from app.ingest.ocr import needs_ocr, render_page, transcribe_image
 
 REPEAT_SHARE = 0.6  # a line on more than 60% of pages is a header or footer
+# NUL and other C0 control characters (except tab and newline) appear in some PDFs; Postgres text
+# columns reject \x00 (error 22P05), so they are removed before chunking.
+_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
+
+
+def clean_text(text: str) -> str:
+    return _CONTROL.sub("", text)
+
+
 _DIGITS = re.compile(r"\d+")
 _SPACES = re.compile(r"[ \t ]+")
 
@@ -33,7 +42,7 @@ def _page_paragraphs(page: pymupdf.Page) -> list[list[str]]:
     for block in page.get_text("blocks", sort=True):
         if block[6] != 0:  # 0 = text block; skip images
             continue
-        lines = [_SPACES.sub(" ", ln).strip() for ln in block[4].splitlines()]
+        lines = [_SPACES.sub(" ", clean_text(ln)).strip() for ln in block[4].splitlines()]
         lines = [ln for ln in lines if ln]
         if lines:
             paragraphs.append(lines)
@@ -76,7 +85,7 @@ def load_pdf_with_ocr(path: Path, on_progress: Callable[[int, int], None] | None
         for done, index in enumerate(scanned, start=1):
             if on_progress:
                 on_progress(done, len(scanned))
-            text = transcribe_image(render_page(doc, index))
+            text = clean_text(transcribe_image(render_page(doc, index)))
             if text and text.strip().lower() not in ("[illegible]", ""):
                 pages[index + 1] = {"text": text, "page": index + 1, "ocr": True}
     return [pages[n] for n in sorted(pages)]
