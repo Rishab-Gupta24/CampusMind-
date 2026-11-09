@@ -219,3 +219,55 @@ def course_codes() -> dict[str, str]:
     """{course_id: "MATH F113"} — cached; the catalog changes only through seed/migrations."""
     rows = get_client().table("courses").select("id, code").execute().data
     return {r["id"]: r["code"] for r in rows}
+
+
+# ---------- calendar events ----------
+
+EVENT_FIELDS = "*, courses(code), sources(title)"
+
+
+def chunks_for(source_id: str) -> list[Row]:
+    return (
+        get_client().table("chunks").select("id, content, page").eq("source_id", source_id).order("page").execute().data
+    )
+
+
+def insert_event(row: Row) -> Row:
+    return get_client().table("events").insert(row).execute().data[0]
+
+
+def get_event(event_id: str) -> Row | None:
+    rows = get_client().table("events").select(EVENT_FIELDS).eq("id", event_id).limit(1).execute().data
+    return rows[0] if rows else None
+
+
+def update_event(event_id: str, fields: Row) -> Row | None:
+    rows = get_client().table("events").update(fields).eq("id", event_id).execute().data
+    return rows[0] if rows else None
+
+
+def delete_event(event_id: str) -> None:
+    get_client().table("events").delete().eq("id", event_id).execute()
+
+
+def events_for_source(source_id: str) -> list[Row]:
+    return get_client().table("events").select("title, due_at").eq("source_id", source_id).execute().data
+
+
+def list_events(
+    course_id: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    include_suggested: bool = False,
+) -> list[Row]:
+    query = get_client().table("events").select(EVENT_FIELDS).order("due_at")
+    if course_id:
+        # The student's course plus campus-wide events.
+        query = query.or_(f"course_id.eq.{course_id},course_id.is.null")
+    if start:
+        query = query.gte("due_at", start)
+    if end:
+        query = query.lte("due_at", end)
+    if not include_suggested:
+        query = query.eq("status", "confirmed")
+    return query.execute().data

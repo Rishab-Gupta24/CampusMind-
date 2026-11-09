@@ -11,6 +11,7 @@ from app import db
 from app.config import get_settings
 from app.ingest import flagger, prepare
 from app.ingest.chunker import Chunk, chunk_lecture, chunk_pdf
+from app.ingest.deadlines import extract_events
 from app.ingest.lecture_notes import write_notes
 from app.ingest.ocr import OCRError, image_to_pdf
 from app.ingest.pdf_loader import load_pdf_with_ocr, page_count
@@ -70,6 +71,17 @@ def _fail(source_id: str, exc: Exception) -> None:
 IMAGE_TYPES = {".jpg", ".jpeg", ".png", ".webp"}
 
 
+def _suggest_dates(source_id: str) -> None:
+    """Handouts and circulars often list exam dates: offer them as calendar suggestions (best effort)."""
+    source = db.get_source(source_id)
+    if not source or source["kind"] not in ("handout", "campus"):
+        return
+    try:
+        asyncio.run(extract_events(source_id))
+    except Exception:
+        log.exception("Date extraction failed for %s", source_id)
+
+
 def process_document(source_id: str, upload_path: Path) -> None:
     compressed = tmp_path(f"{source_id}.compressed.pdf")
     converted = tmp_path(f"{source_id}.image.pdf")
@@ -100,6 +112,7 @@ def process_document(source_id: str, upload_path: Path) -> None:
                 "storage_path": pdf_storage_path(source_id),
             },
         )
+        _suggest_dates(source_id)
     except Exception as exc:  # noqa: BLE001 — every failure must end as status 'failed'
         _fail(source_id, exc)
     finally:

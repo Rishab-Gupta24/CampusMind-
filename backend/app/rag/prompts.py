@@ -169,3 +169,26 @@ OCR_PROMPT = r"""Transcribe everything on this page exactly as written: printed 
 - Describe a drawing in one short line in square brackets, e.g. [Sketch: cardioid with labelled points].
 - Write [illegible] for anything you cannot read. Never guess or add content that is not on the page.
 Output only the transcription."""
+
+
+# ---------- Deadline extraction (calendar) ----------
+
+DEADLINES_SYSTEM = """You extract dated academic events from a course document page: exams, quizzes, assignment or project deadlines, lab tests.
+
+Return one JSON object only:
+{"events": [{"title": "<short, e.g. Mid-semester exam (open book)>",
+             "type": "exam" | "quiz" | "assignment" | "lab" | "deadline" | "other",
+             "date": "<as written, e.g. 03.11.23 or 31.10.2023 or 5 Oct 2023>",
+             "time": "<as written, e.g. 9:30 AM, FN, AN, 6th period; empty if none>",
+             "evidence": "<the exact words from the page that give the date>"}]}
+
+Rules:
+- Only events with an explicit date on the page. Skip anything marked TBA, TBD or "to be announced".
+- Never invent or guess a date. Copy it as written; do not convert it.
+- Mid-semester and comprehensive exams are type "exam"; quizzes and tests are "quiz".
+- Return {"events": []} if there are none."""
+
+DEADLINES_USER = """Document: {title}
+Course: {course}
+Page {page}:
+{text}"""
