@@ -161,6 +161,37 @@ export interface Flashcard {
   source: StudySource;
 }
 
+export type EventType = "exam" | "quiz" | "assignment" | "lab" | "deadline" | "class" | "other";
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  type: EventType;
+  course_id: string | null;
+  course_code: string | null;
+  section_id: string | null;
+  starts_at: string | null;
+  due_at: string;
+  all_day: boolean;
+  location: string | null;
+  notes: string | null;
+  source_id: string | null;
+  source_title: string | null;
+  page: number | null;
+  status: "confirmed" | "suggested";
+}
+
+export interface EventInput {
+  title: string;
+  type: EventType;
+  due_at: string;
+  starts_at?: string | null;
+  all_day?: boolean;
+  course_id?: string | null;
+  location?: string | null;
+  notes?: string | null;
+}
+
 export class ApiError extends Error {}
 
 // ---------- HTTP helpers ----------
@@ -310,6 +341,25 @@ export const api = {
 
   flagged: (courseId?: string | null) => request<FlaggedMoment[]>(`/api/flagged${query({ course_id: courseId })}`),
   insights: () => request<Insights>("/api/insights"),
+
+  events: (params: { course_id?: string | null; start?: string; end?: string; include_suggested?: boolean } = {}) =>
+    request<CalendarEvent[]>(
+      `/api/events${query({
+        course_id: params.course_id,
+        start: params.start,
+        end: params.end,
+        include_suggested: params.include_suggested ? "true" : null,
+      })}`,
+    ),
+  createEvent: (event: EventInput) => request<CalendarEvent>("/api/events", json(event)),
+  updateEvent: (id: string, patch: Partial<EventInput> & { status?: "confirmed" | "suggested" }) =>
+    request<CalendarEvent>(`/api/events/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  deleteEvent: (id: string) => request<{ ok: boolean }>(`/api/events/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  calendarFeedUrl: (courseId?: string | null) => `${API_URL}/api/calendar.ics${query({ course_id: courseId })}`,
 
   quiz: (req: QuizRequest) => request<{ topic: string; questions: QuizQuestion[] }>("/api/quiz", json(req)),
   flashcards: (req: { topic: string; count: number; course_id?: string | null; section_id?: string | null; lecture_id?: string | null }) =>

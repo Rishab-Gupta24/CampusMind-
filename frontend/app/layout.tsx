@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
 import { GlassNav } from "@/components/GlassNav";
+import { ReminderService } from "@/components/ReminderService";
 import { PrefsProvider } from "@/lib/prefs";
 
 import "katex/dist/katex.min.css";
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh">
         <PrefsProvider>
           <GlassNav />
+          <ReminderService />
           <main className="mx-auto w-full max-w-[760px] px-4 pt-6 pb-12 md:px-8">{children}</main>
         </PrefsProvider>
       </body>

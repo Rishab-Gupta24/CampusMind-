@@ -17,6 +17,13 @@
   --glass: rgba(255, 255, 255, 0.62);
   --glass-border: rgba(255, 255, 255, 0.7);
   --glass-highlight: rgba(255, 255, 255, 0.5);
+  /* Deadline urgency (design.md §3 exception): four fixed steps, always paired with a text label. */
+  --urgency-green: #248a3d;
+  --urgency-yellow: #b88a00;
+  --urgency-orange: #c93400;
+  --urgency-red: #ff1f1f;
+  --event-exam: #d70015;
+  --event-neutral: #6e6e73;
   color-scheme: light;
 }
 
@@ -37,6 +44,12 @@
     --glass: rgba(28, 28, 30, 0.55);
     --glass-border: rgba(255, 255, 255, 0.12);
     --glass-highlight: rgba(255, 255, 255, 0.06);
+    --urgency-green: #30d158;
+    --urgency-yellow: #ffd60a;
+    --urgency-orange: #ff9f0a;
+    --urgency-red: #ff453a;
+    --event-exam: #ff6961;
+    --event-neutral: #a1a1a6;
     color-scheme: dark;
   }
 }

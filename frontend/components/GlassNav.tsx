@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect, useRef } from "react";
 
 import { CourseSelector } from "@/components/CourseSelector";
 
@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/lectures", label: "Lectures" },
   { href: "/flagged", label: "Flagged" },
   { href: "/practice", label: "Practice" },
+  { href: "/calendar", label: "Calendar" },
   { href: "/sources", label: "Sources" },
 ] as const;
 
@@ -32,6 +33,11 @@ function ActiveNav() {
 }
 
 function NavBar({ pathname }: { pathname: string | null }) {
+  const listRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    // On phones the links scroll sideways: keep the current page's link in view.
+    listRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [pathname]);
   return (
     <header className="sticky top-0 z-40 px-2 pt-2 md:px-4 md:pt-3">
       <nav aria-label="Main" className="glass mx-auto flex max-w-[1040px] flex-wrap items-center gap-x-2 px-3 py-1.5 md:gap-6 md:px-5">
@@ -41,7 +47,7 @@ function NavBar({ pathname }: { pathname: string | null }) {
         >
           CampusMind
         </Link>
-        <ul className="flex min-w-0 items-center gap-0.5 overflow-x-auto [scrollbar-width:none] md:gap-1">
+        <ul ref={listRef} className="flex min-w-0 items-center gap-0.5 overflow-x-auto [scrollbar-width:none] md:gap-1">
           {LINKS.map((link) => {
             const active = pathname !== null && isActive(pathname, link.href);
             return (
