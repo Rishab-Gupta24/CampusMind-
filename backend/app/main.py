@@ -1,4 +1,7 @@
+import asyncio
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -6,16 +9,38 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api import catalog, documents, health, lectures
+from app.api import ask, catalog, documents, feedback, health, lectures
 from app.config import get_settings
 from app.db import NotConfiguredError
+from app.llm.base import get_provider
+from app.rag import reranker
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("campusmind")
 
 settings = get_settings()
 
-app = FastAPI(title="CampusMind API")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Load the reranker and warm the LLM in the background so the first question starts fast."""
+
+    async def warm() -> None:
+        try:
+            await asyncio.to_thread(reranker.load)
+            provider = get_provider()
+            if hasattr(provider, "warm_up"):
+                await provider.warm_up()
+            log.info("Models ready")
+        except Exception:
+            log.exception("Model warm-up failed")
+
+    task = asyncio.create_task(warm())
+    yield
+    task.cancel()
+
+
+app = FastAPI(title="CampusMind API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_origin],
@@ -51,3 +76,5 @@ app.include_router(health.router)
 app.include_router(catalog.router)
 app.include_router(documents.router)
 app.include_router(lectures.router)
+app.include_router(ask.router)
+app.include_router(feedback.router)

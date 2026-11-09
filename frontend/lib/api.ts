@@ -52,15 +52,18 @@ export interface SourceRef {
   page?: number;
   start_s?: number;
   source_id: string;
+  chunk_id: string;
   excerpt: string;
   badges: BadgeName[];
+  flag_reason?: string | null;
+  instructor?: Instructor | null;
 }
 
 export type AskEvent =
   | { type: "token"; text: string }
   | { type: "sources"; sources: SourceRef[] }
-  | { type: "not_found" }
-  | { type: "done"; answer_id: string }
+  | { type: "not_found"; message: string }
+  | { type: "done"; answer_id: string; answer: string }
   | { type: "error"; error: string };
 
 export interface DocumentItem {
@@ -153,6 +156,7 @@ const MOCK_SOURCES: SourceRef[] = [
     kind: "campus",
     page: 12,
     source_id: "mock-regulations",
+    chunk_id: "mock-regulations_12_0",
     excerpt: "A student who misses a mid-semester test for a genuine reason may apply for a makeup test.",
     badges: ["Official"],
   },
@@ -162,17 +166,20 @@ const MOCK_SOURCES: SourceRef[] = [
     kind: "lecture",
     start_s: 760,
     source_id: "mock-lecture-4",
+    chunk_id: "mock-lecture-4_760_0",
     excerpt: "Bayes' theorem with two events — this will definitely come in the exam.",
     badges: ["Flagged", "IC"],
   },
 ];
+
+const NOT_FOUND = "I couldn't find this in the campus sources. Try rephrasing, or check with the academic office.";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function* mockAsk(req: AskRequest): AsyncGenerator<AskEvent> {
   await wait(400);
   if (/weather|cricket|movie/i.test(req.question)) {
-    yield { type: "not_found" };
+    yield { type: "not_found", message: NOT_FOUND };
     return;
   }
   const answer = "Apply to the Instructor-in-Charge for a makeup test within the stated window [1]. ";
@@ -181,7 +188,7 @@ async function* mockAsk(req: AskRequest): AsyncGenerator<AskEvent> {
     yield { type: "token", text: word };
   }
   yield { type: "sources", sources: MOCK_SOURCES.slice(0, 1) };
-  yield { type: "done", answer_id: "mock-answer" };
+  yield { type: "done", answer_id: "mock-answer", answer };
 }
 
 // ---------- SSE parsing for POST /api/ask ----------
@@ -231,13 +238,15 @@ function parseSseEvent(raw: string): AskEvent | null {
   const payload = data.join("\n");
   switch (name) {
     case "token":
-      return { type: "token", text: payload };
+      return { type: "token", text: (JSON.parse(payload) as { text: string }).text };
     case "sources":
       return { type: "sources", sources: JSON.parse(payload) as SourceRef[] };
     case "not_found":
-      return { type: "not_found" };
-    case "done":
-      return { type: "done", answer_id: (JSON.parse(payload) as { answer_id: string }).answer_id };
+      return { type: "not_found", message: (JSON.parse(payload) as { message: string }).message };
+    case "done": {
+      const done = JSON.parse(payload) as { answer_id: string; answer: string };
+      return { type: "done", answer_id: done.answer_id, answer: done.answer };
+    }
     case "error":
       return { type: "error", error: (JSON.parse(payload) as { error: string }).error };
     default:
