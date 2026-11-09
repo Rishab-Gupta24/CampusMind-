@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { GlassNav } from "@/components/GlassNav";
 import { PrefsProvider } from "@/lib/prefs";
 
+import "katex/dist/katex.min.css";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], weight: ["400", "600"] });

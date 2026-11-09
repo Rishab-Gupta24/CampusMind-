@@ -117,3 +117,14 @@ body {
     transition-property: opacity, color, background-color, border-color !important;
   }
 }
+
+/* Answers: display math centred on its own line, scrolls instead of overflowing on phones. */
+.answer-md .katex-display {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+.answer-md .katex {
+  font-size: 1.05em;
+}
