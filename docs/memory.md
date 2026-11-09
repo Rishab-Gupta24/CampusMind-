@@ -11,7 +11,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 - **Deadlines:** Round 1 + shortlisting (top 10) → **10 Nov 2026** · Final pitch → **11 Nov 2026**.
 - **Judging needs:** one clear student problem, how AI helps, a **working prototype**.
 - **Constraint:** AED 0 → local open-source models (Ollama) + Supabase free tier.
-- **Current phase:** Phase 0 done except 0.1 check (teammates clone). Next: Phase 1 ingestion.
+- **Current phase:** Phase 1 (ingestion) done and tested with TEST fixtures. Next: Phase 2 retrieval and answers.
 - **Demo machine:** this laptop — Ryzen 9 8940HX, 16 GB RAM, RTX 5050 Laptop 8 GB → `LLM_MODEL=gemma4:e4b` (verified with `ollama pull`).
 - **GitHub repo:** https://github.com/Rishab-Gupta24/CampusMind-
 - **Supabase project:** `campusmind`, ref `apqaojhsbhvapllcyqto`, region ap-south-1 (Mumbai), free tier.
@@ -20,6 +20,11 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Decision | Reason |
 | --- | --- | --- |
+| 2026-11-09 | Whisper gets audio decoded by the ffmpeg binary (numpy samples), not PyAV | Installed faster-whisper and av versions are incompatible; ffmpeg is already required |
+| 2026-11-09 | Re-upload identity for PDFs = same title + kind + course → reuses the source id | F3 "re-upload replaces"; deterministic chunk ids then overwrite |
+| 2026-11-09 | Lecture transcript stored in Storage `transcripts/{id}.json` | `lecture_notes` has no transcript column; keeps rows small |
+| 2026-11-09 | Chunk size measured in words (≤ 380 words ≈ 500 tokens); long paragraphs split at 85% so the 15% overlap fits | No tokenizer dependency |
+| 2026-11-09 | Accept extra audio types (webm, ogg, opus, aac, mov) besides mp3/m4a/wav/mp4 | ffmpeg converts them all; phones record in these |
 | 2026-11-09 | Next.js 16 + Tailwind v4 (create-next-app defaults); added `lucide-react`, `clsx` | Current versions; both libs approved |
 | 2026-11-09 | Python 3.12 instead of 3.11 | Already installed; 3.15 too new for faster-whisper/torch wheels; 3.12 works with every approved lib |
 | 2026-11-09 | Seed uses fictional names (Dr. Asha Demo, etc.) | No permission yet for real instructor names |
@@ -45,6 +50,8 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Change | Files |
 | --- | --- | --- |
+| 2026-11-09 | Phase 1: prepare, pdf_loader, transcriber, chunker, embedder, pipeline, document + lecture APIs, 9 unit tests | `backend/app/ingest/*`, `backend/app/rag/embedder.py`, `backend/app/db.py`, `backend/app/api/{documents,lectures}.py` |
+| 2026-11-09 | Phase 0: Supabase schema + seed, backend and frontend skeletons, README | `supabase/`, `backend/`, `frontend/` |
 | 2026-11-09 | Repo scaffold (task 0.1): docs/, backend/, frontend/, supabase/, .gitignore, README | root
 | 2026-11-09 | Docs v2: Supabase, instructor priority, flagged moments, feedback loop, upload prep, flowcharts | `docs/*` |
 | 2026-11-09 | Docs v1 created | `docs/*` |
@@ -53,7 +60,8 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Bug | Cause | Fix | Status |
 | --- | --- | --- | --- | --- |
-| — | — | — | — | — |
+| 2026-11-09 | Transcription crashed: `av.open() got an unexpected keyword argument 'metadata_errors'` | faster-whisper newer than installed PyAV | Decode audio with ffmpeg → numpy, pass samples to Whisper | Fixed |
+| 2026-11-09 | Chunk overlap dropped for long paragraphs | Pieces were exactly MAX_WORDS, so the overlap tail never fit | Split long paragraphs at 85% of MAX_WORDS | Fixed (unit test) |
 
 ## 5. Eval scores
 
@@ -65,12 +73,15 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 - Which BPDC documents may we use? (Academic regulations, student handbook, one MATH F113 course handout, one circular.)
 - Which lecture do we use, with whose consent? Fallback: a teammate records a 5-minute MATH F113 mini-lecture that includes two "this will come in the exam" moments.
-- Demo laptop specs → `LLM_MODEL`.
 - Team member names and who owns backend / frontend / data / pitch.
 - Real course/section/instructor names for `supabase/seed.sql` (or clearly fictional demo names).
 
 ## 7. Notes for future sessions
 
+- **Delete the TEST sources before task 6.1:** "TEST Academic Regulations" (PDF) and "TEST Lecture 4 - Bayes theorem" (TTS lecture). They exist only to develop Phase 2.
+- Speed on this laptop: 2-minute lecture → ready in ~40 s (Whisper small, CPU int8). Expect ~2 min for a 5-minute lecture.
+- Flagger (3.1): match cue phrases on word boundaries — "exam" must not match "example".
+- Tasks 1.2/1.3 checks were run on generated TEST files; re-check page numbers and transcript on the real D.1/D.2 files.
 - Changing `EMBED_MODEL` → delete all `chunks` rows and re-embed every source.
 - Supabase free projects pause after 1 week idle → open the dashboard before each round.
 - Pre-process all demo files before going on stage; never transcribe live.

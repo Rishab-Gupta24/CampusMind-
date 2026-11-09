@@ -137,34 +137,34 @@ flowchart LR
     PR --> STO[("Storage")]
 ```
 
-- [ ] **1.1 🔑 Upload preparation** — `ingest/prepare.py` ⏱ 25 min
+- [x] **1.1 🔑 Upload preparation** — `ingest/prepare.py` ⏱ 25 min
   - `check_size(file, MAX_UPLOAD_MB)` → 413 with a clear message.
   - `prepare_audio(in_path) -> out.opus` using `ffmpeg -i in -vn -ac 1 -ar 16000 -c:a libopus -b:a 24k out.opus` via `subprocess.run(check=True)`.
   - `prepare_pdf(in_path)`: if > `PDF_COMPRESS_OVER_MB`, `doc.save(out, garbage=4, deflate=True)`.
   - Delete temp files in a `finally` block.
   - **Check:** a 1-hour mp4 becomes ~10 MB `.opus`; a 25 MB PDF shrinks.
 
-- [ ] **1.2 🔑 PDF loader** — `ingest/pdf_loader.py` ⏱ 20 min
+- [x] **1.2 🔑 PDF loader** — `ingest/pdf_loader.py` ⏱ 20 min
   - PyMuPDF → `[{text, page}]`; drop lines repeated on > 60% of pages (headers/footers); normalise whitespace.
   - **Check:** regulations PDF returns the right page numbers for 3 spot-checked rules.
 
-- [ ] **1.3 🔑 Transcriber** — `ingest/transcriber.py` ⏱ 25 min
+- [x] **1.3 🔑 Transcriber** — `ingest/transcriber.py` ⏱ 25 min
   - faster-whisper (`WHISPER_MODEL`, `compute_type="int8"`), loaded lazily once; `vad_filter=True`.
   - Returns `[{text, start, end}]`.
   - **Check:** demo lecture transcript is readable; timestamps match the audio.
 
-- [ ] **1.4 🔑 Chunker** — `ingest/chunker.py` ⏱ 25 min
+- [x] **1.4 🔑 Chunker** — `ingest/chunker.py` ⏱ 25 min
   - PDF: paragraphs within a page, 300–500 tokens, 15% overlap, never across pages.
   - Lecture: merge segments into 60–90 s windows, prefer breaks at pauses > 1.5 s; keep `start_s`, `end_s`.
   - Deterministic id `{source_id}_{page|int(start)}_{n}`.
   - **Check:** unit test — same input gives the same ids; no empty chunks.
 
-- [ ] **1.5 🔑 Embedder and store** — `rag/embedder.py`, `db.py` ⏱ 20 min
+- [x] **1.5 🔑 Embedder and store** — `rag/embedder.py`, `db.py` ⏱ 20 min
   - Batch 32 texts per `/api/embed` call; assert length `EMBED_DIM`.
   - `upsert_chunks(rows)`; `delete_chunks(source_id)` before re-indexing a source.
   - **Check:** chunk count in `/api/health` increases after an upload; re-upload doesn't duplicate.
 
-- [ ] **1.6 🔑 Pipeline + upload APIs** — `ingest/pipeline.py`, `api/documents.py`, `api/lectures.py` ⏱ 35 min
+- [x] **1.6 🔑 Pipeline + upload APIs** — `ingest/pipeline.py`, `api/documents.py`, `api/lectures.py` ⏱ 35 min
   - `POST` saves to `backend/tmp/`, inserts `sources` (status `processing`), returns `202`, runs the pipeline as a FastAPI `BackgroundTask`.
   - Pipeline: prepare → upload to Storage (`pdfs/{id}.pdf` or `lectures/{id}.opus`) → load/transcribe → chunk → embed → upsert → status `ready` (or `failed` + `error`).
   - Save the lecture transcript JSON in `lecture_notes` or Storage (`transcripts/{id}.json`).
