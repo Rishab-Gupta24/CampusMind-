@@ -197,8 +197,10 @@ Page {page}:
 # ---------- Quiz check: exactly one correct option ----------
 
 MCQ_CHECK_SYSTEM = """You check a multiple-choice question against a source passage.
-For each option, decide if it is correct according to the passage (mathematically equivalent forms count as correct).
-Return one JSON object only: {"correct": [<indexes 0-3 of every correct option>]}"""
+Judge every option on its own, ignoring the others: is it a correct answer to the question according to the passage?
+An option that is mathematically equivalent to the correct answer (for example an expanded or rearranged formula) is also correct.
+Return one JSON object only:
+{"options": [{"index": 0, "reason": "<short reason>", "correct": true|false}, ...one entry per option]}"""
 
 MCQ_CHECK_USER = """Passage:
 {passage}
