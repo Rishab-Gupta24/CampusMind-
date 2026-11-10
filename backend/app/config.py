@@ -51,6 +51,15 @@ class Settings(BaseSettings):
     # CORS
     frontend_origin: str = "http://localhost:3000"
 
+    @property
+    def allowed_origins(self) -> list[str]:
+        """The app's origin under both local names, so opening 127.0.0.1:3000 works too."""
+        origins = {self.frontend_origin}
+        for a, b in (("//localhost", "//127.0.0.1"), ("//127.0.0.1", "//localhost")):
+            if a in self.frontend_origin:
+                origins.add(self.frontend_origin.replace(a, b))
+        return sorted(origins)
+
 
 @lru_cache
 def get_settings() -> Settings:
