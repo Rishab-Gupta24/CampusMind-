@@ -16,6 +16,7 @@ from app.config import get_settings
 from app.db import NotConfiguredError
 from app.llm.base import get_provider
 from app.rag import reranker
+from app.rag.embedder import embed_query
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("campusmind")
@@ -37,6 +38,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
             log.exception("Could not check for interrupted uploads")
         try:
             await asyncio.to_thread(reranker.load)
+            await asyncio.to_thread(embed_query, "warm up")  # loads the embedding model too
             provider = get_provider()
             if hasattr(provider, "warm_up"):
                 await provider.warm_up()

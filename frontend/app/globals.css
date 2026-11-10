@@ -14,7 +14,7 @@
   --flag-soft: #ff950014;
   --good: #248a3d;
   --danger: #d70015;
-  --glass: rgba(255, 255, 255, 0.62);
+  --glass: rgba(255, 255, 255, 0.75);
   --glass-border: rgba(255, 255, 255, 0.7);
   --glass-highlight: rgba(255, 255, 255, 0.5);
   /* Deadline urgency (design.md §3 exception): four fixed steps, always paired with a text label. */
@@ -41,7 +41,7 @@
     --flag-soft: #ff9f0a26;
     --good: #30d158;
     --danger: #ff6961;
-    --glass: rgba(28, 28, 30, 0.55);
+    --glass: rgba(28, 28, 30, 0.75);
     --glass-border: rgba(255, 255, 255, 0.12);
     --glass-highlight: rgba(255, 255, 255, 0.06);
     --urgency-green: #30d158;
@@ -96,7 +96,6 @@ body {
 .glass {
   background: var(--glass);
   backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid var(--glass-border);
   box-shadow:
     inset 0 1px 0 var(--glass-highlight),
@@ -119,7 +118,6 @@ body {
   .glass {
     background: var(--surface);
     backdrop-filter: none;
-    -webkit-backdrop-filter: none;
   }
 }
 

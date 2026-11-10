@@ -1,5 +1,6 @@
 "use client";
 
+import clsx from "clsx";
 import { Plus, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -88,15 +89,15 @@ function Documents() {
       {docs && docs.length === 0 ? <EmptyNote>No documents yet. Add regulations, handouts or circulars.</EmptyNote> : null}
       {docs && docs.length > 0 ? (
         <div className="overflow-x-auto rounded-card bg-surface [contain:inline-size]">
-          <table className="w-full text-left text-[15px]">
+          <table className="w-full table-fixed text-left text-[15px]">
             <thead className="text-[13px] text-text-2">
               <tr className="border-b border-border">
                 <th className="px-4 py-2.5 font-normal">Title</th>
-                <th className="px-2 py-2.5 font-normal max-sm:hidden">Type</th>
-                <th className="px-2 py-2.5 font-normal max-sm:hidden">Course</th>
-                <th className="px-2 py-2.5 font-normal tabular-nums max-sm:hidden">Pages</th>
-                <th className="px-2 py-2.5 font-normal">Status</th>
-                <th className="px-2 py-2.5 font-normal">
+                <th className="w-[9.5rem] px-2 py-2.5 font-normal max-sm:hidden">Type</th>
+                <th className="w-[6.5rem] px-2 py-2.5 font-normal max-sm:hidden">Course</th>
+                <th className="w-[4.5rem] px-2 py-2.5 font-normal tabular-nums max-sm:hidden">Pages</th>
+                <th className="w-[6rem] px-2 py-2.5 font-normal max-sm:w-[5.5rem]">Status</th>
+                <th className={clsx("px-2 py-2.5 font-normal", confirming ? "w-[9.5rem]" : "w-14 max-sm:w-12")}>
                   <span className="sr-only">Actions</span>
                 </th>
               </tr>
@@ -104,8 +105,10 @@ function Documents() {
             <tbody className="divide-y divide-border">
               {docs.map((d) => (
                 <tr key={d.id}>
-                  <td className="px-4 py-2.5 sm:max-w-[260px]">
-                    <span className="block break-words text-text sm:truncate">{d.title}</span>
+                  <td className="px-4 py-2.5">
+                    <span className="block break-words text-text sm:truncate" title={d.title}>
+                      {d.title}
+                    </span>
                     <span className="block text-[13px] text-text-2 sm:hidden">
                       {[KIND_LABEL[d.kind], code(d.course_id), d.pages ? `${d.pages} pages` : ""].filter(Boolean).join(" · ")}
                     </span>

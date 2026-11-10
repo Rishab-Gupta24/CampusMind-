@@ -91,6 +91,12 @@ def process_document(source_id: str, upload_path: Path) -> None:
         if upload_path.suffix.lower() in IMAGE_TYPES:
             source_path = image_to_pdf(upload_path, converted)
         stored = prepare.prepare_pdf(source_path, compressed)
+        limit_mb = get_settings().max_stored_mb
+        if stored.stat().st_size > limit_mb * 1024 * 1024:
+            raise PrepareError(
+                f"This PDF is still over {limit_mb} MB after compression, the storage limit. "
+                "Split it into smaller parts and upload those."
+            )
 
         def progress(done: int, total: int) -> None:
             db.update_source(source_id, {"stage": f"ocr:{done}/{total}"})
