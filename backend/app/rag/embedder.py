@@ -19,7 +19,8 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
             batch = texts[start : start + BATCH_SIZE]
             try:
                 res = client.post(
-                    "/api/embed", json={"model": settings.embed_model, "input": batch, "keep_alive": "30m"}
+                    "/api/embed",
+                    json={"model": settings.embed_model, "input": batch, "keep_alive": settings.ollama_keep_alive},
                 )
                 res.raise_for_status()
             except httpx.HTTPError as exc:

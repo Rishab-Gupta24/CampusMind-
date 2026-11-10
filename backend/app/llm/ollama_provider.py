@@ -21,7 +21,7 @@ class OllamaProvider(LLMProvider):
             "messages": messages,
             "stream": stream,
             "think": False,  # gemma4 thinks by default; answers must start fast
-            "keep_alive": "30m",
+            "keep_alive": get_settings().ollama_keep_alive,
             "options": {"temperature": temperature, "num_predict": max_tokens, "num_ctx": 8192},
         }
 

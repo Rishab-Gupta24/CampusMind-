@@ -37,7 +37,7 @@ def transcribe_image(png: bytes) -> str:
         "model": settings.ocr_model or settings.llm_model,
         "stream": False,
         "think": False,
-        "keep_alive": "30m",
+        "keep_alive": get_settings().ollama_keep_alive,
         # Same num_ctx as answers so the shared model is not reloaded between OCR and questions.
         "options": {"temperature": 0, "num_ctx": 8192, "num_predict": 2000},
         "messages": [{"role": "user", "content": OCR_PROMPT, "images": [base64.b64encode(png).decode()]}],
