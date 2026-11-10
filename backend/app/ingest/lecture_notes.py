@@ -24,6 +24,16 @@ class Notes(TypedDict):
     formulas: list[str]
 
 
+# The model sometimes spells probability operators as words inside LaTeX: P(A \text{ given } B).
+_WORD_OPERATORS = {"given": r"\mid", "and": r"\cap", "or": r"\cup"}
+_WORD_OPERATOR = re.compile(r"\s*\\(?:text|mathrm|textrm)\{\s*(given|and|or)\s*\}\s*")
+
+
+def symbol_operators(text: str) -> str:
+    r"""P(A \text{ given } B) -> P(A \mid B); "and" -> \cap, "or" -> \cup. Plain prose is untouched."""
+    return _WORD_OPERATOR.sub(lambda m: " " + _WORD_OPERATORS[m.group(1)] + " ", text)
+
+
 def _parse(raw: str) -> Notes:
     data = parse_json_object(raw)
     summary = data.get("summary") or ""
@@ -33,9 +43,9 @@ def _parse(raw: str) -> Notes:
     if summary and "\n" not in summary:
         summary = "\n".join(s.strip() for s in re.split(r"(?<=[.!?])\s+", summary) if s.strip())
     return {
-        "summary": summary,
-        "key_points": [str(p).strip() for p in data.get("key_points") or [] if str(p).strip()][:8],
-        "formulas": [str(f).strip() for f in data.get("formulas") or [] if str(f).strip()],
+        "summary": symbol_operators(summary),
+        "key_points": [symbol_operators(str(p).strip()) for p in data.get("key_points") or [] if str(p).strip()][:8],
+        "formulas": [symbol_operators(str(f).strip()) for f in data.get("formulas") or [] if str(f).strip()],
     }
 
 
