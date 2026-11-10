@@ -20,6 +20,8 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Decision | Reason |
 | --- | --- | --- |
+| 2026-11-10 | Textbooks back in the KB (12, kind `material`, 24,637 chunks, DB 283 MB) | Task 2.10 check met after migrations 0013/0014: search 0.07-0.08 s warm median at ~25k chunks, eval unchanged |
+| 2026-11-10 | `hybrid_search` is PL/pgSQL with dynamic SQL (0013/0014): exact distances for scopes of at most 1000 chunks, HNSW above; full-text matches only terms in at most 2% of chunks (from `pg_stats`), or the single rarest, and ranks with all terms | SQL function = one generic plan, which exact-scanned all embeddings (11.7 s) at 23k chunks; OR over common words ("system", "c") matched 40% of the corpus and ranking took 1-2.5 s. `pg_stats` stays fresh through autovacuum; a term table via `ts_stat` took 13 s (over the 8 s limit) |
 | 2026-11-10 | `hybrid_search` uses a half-precision HNSW index (`chunks_embedding_hv_idx` on `embedding::halfvec(1024)`) with `hnsw.iterative_scan = relaxed_order` and `ef_search = 100` set on the function | Exact scan read every 4 KB embedding from TOAST (~5 s at 4.9k chunks on the free tier). Index 12 MB vs 191 MB, search 0.06-0.16 s, same eval |
 | 2026-11-10 | State-changing API calls need header `X-CampusMind: 1`; backend accepts Host localhost / 127.0.0.1 / [::1] only; CORS allows the app origin under both local names | Blocks cross-site uploads from other websites (multipart POST skips the CORS preflight) and DNS rebinding. Scripts calling the API must send the header |
 | 2026-11-10 | Source kind fixed by title: only titles with 'Handout' or ending ' HO' (plus 'Physics Lab') stay `handout`; ~293 bulk-imported slides, notes, PYQs, worksheets and answer keys became `material` | The bulk import tagged everything `handout`, so all of it got the Official badge/boost and PYQs escaped the past-paper rule. Reversible with an UPDATE on `sources.kind` |
@@ -96,6 +98,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Change | Files |
 | --- | --- | --- |
+| 2026-11-10 | Task 2.10: re-ingested the 12 textbooks from the Drive mirror (Cengel + solutions, Fundamentals of Physics, Thomas Calculus, Atkins, Hanly, Anton, Devore + solutions, TRW, Brown, EG textbook) via `POST /api/documents`, kind `material`; migrations 0013 + 0014 (`hybrid_search` rewrite); `delete_chunks` in batches of 100 (also used before deleting a source); `upsert_chunks` halves a batch on statement timeout; 3 new unit tests (51 pass) | `supabase/migrations/0013_hybrid_search_scaled.sql`, `0014_hybrid_search_rarest_term.sql`, `backend/app/db.py`, `backend/tests/test_db_upsert.py`, `docs/Architecture.md` |
 | 2026-11-10 | Bulk ingest from the shared BITS Materials Drive (1st year only): 499 files downloaded, 305 text PDFs ready; 165 scanned skipped (OCR off for the run), 17 duplicates of the zip test set. KB now **321 ready docs, 4,905 chunks, DB 317 MB, storage 271 MB**. Retrieval probe over 13 courses: relevant top hits for every course, median ~1.1 s | Supabase data |
 | 2026-11-10 | Seed: all 13 1st-year courses (MATH F111/F112, EEE F111, ME F110/F112, BIO F111, CHEM F111, BITS F111/F112 added) | `supabase/seed.sql` |
 | 2026-11-10 | `upsert_chunks`: batches of 25 + retry on dropped connections and statement timeouts; 4 unit tests | `backend/app/db.py`, `backend/tests/test_db_upsert.py` |
@@ -117,11 +120,14 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Bug | Cause | Fix | Status |
 | --- | --- | --- | --- | --- |
+| 2026-11-10 | Unscoped search timed out again at 23k chunks (median 8.5 s, 13/24 failed) after re-adding textbooks | 0012 is a SQL function: generic plan with unknown filters chose exact distances over every embedding | 0013/0014: PL/pgSQL per-call plans, HNSW for large scopes, rare-term full-text matching. 0.08 s warm median, 0 timeouts | Fixed |
+| 2026-11-10 | Fundamentals of Physics (3,751 chunks) failed twice: chunk insert, then the delete of its partial chunks, hit the 8 s statement timeout | Inserts into the 60 MB HNSW index got slow (3-15 s per 25 rows); a single DELETE of 2.5k rows plus TOAST was over 8 s | Insert batches split in half on timeout (2 splits absorbed on the retry); deletes in batches of 100; `delete_source` deletes chunks before the source | Fixed |
+| 2026-11-10 | First HNSW search on a new DB connection takes ~1-2 s (later calls 3-15 ms) | Per-connection warm-up; not JIT (off), not disk (all buffer hits). Cause not found | PostgREST keeps connections, so only the first few searches after a restart pay it. Never reached 8 s in testing | Open (accepted) |
 | 2026-11-10 | Quiz search hit 8 s timeout even after textbook removal | 19.7k dead rows in `chunks`, autovacuum not run; exact-scan `hybrid_search` read them all | `vacuum (index_cleanup off, analyze) chunks` (full vacuum times out on free tier because HNSW cleanup is slow); cold search 6.5 s → 1.5 s, median ~1.0 s. Table still 305 MB on disk until `REINDEX` of `chunks_embedding_idx` (do with task 2.10) | Fixed |
 | 2026-11-10 | Large textbooks failed: Postgres 57014 statement timeout on chunk upsert | PostgREST `statement_timeout=8s`; 100-row HNSW inserts too slow above ~10k chunks | Batch 25 + retry | Fixed |
 | 2026-11-10 | Random 'Server disconnected' / HTTP 500 on uploads | Supabase drops idle HTTP/2 connections | Retry in `upsert_chunks`; other DB calls still unprotected | Partly fixed |
 | 2026-11-10 | PDFs > 50 MB after compression fail at Storage upload (400) | Free-tier 50 MB per-file limit | Not fixed: Introduction to Mechanics (58 MB), Maths Solutions Manual (63 MB) left out | Open |
-| 2026-11-10 | Search 1–5.5 s and unscoped queries time out with 24.5k chunks | `hybrid_search` (0006) exact-scans every candidate, no HNSW/GIN use | Textbooks removed (now ~1.1 s); real fix = index-based search (tasks.md 2.10) | Workaround |
+| 2026-11-10 | Search 1–5.5 s and unscoped queries time out with 24.5k chunks | `hybrid_search` (0006) exact-scans every candidate, no HNSW/GIN use | Textbooks removed (now ~1.1 s); real fix = index-based search (tasks.md 2.10): migrations 0011-0014, textbooks re-added | Fixed |
 | 2026-11-10 | Prompt contained a form-feed character instead of `\frac` | `\f` escape in a non-raw Python string written by a script | Raw string; character replaced | Fixed |
 | 2026-11-10 | Quiz LaTeX broke (`\text` became a tab) | Model writes LaTeX in JSON strings without escaping backslashes | Escape backslash commands before `json.loads` | Fixed |
 | 2026-11-10 | Chunk upsert failed with Postgres 22P05 on some PDFs (reported by the testing-materials session) | NUL characters in PDF text | `clean_text()` strips C0 control characters from page and OCR text | Fixed (unit test) |
@@ -156,6 +162,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Commit | Correct (/15) | Refused (/3) | Flag recall | First-token time | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-10 | feat/2.10-textbooks | 15/15 | 3/3 | — | 2.8 s median, 4.9 s max | 332 docs / 24,637 chunks (textbooks back), migration 0014. Ranks unchanged: math-compre-weight 10, phy-compre-date 9. Search alone 0.07-0.08 s warm median, 0 timeouts in 216 calls |
 | 2026-11-10 | b2ba481 | 15/15 | 3/3 | — | 2.6 s median, 3.9 s max | Indexed hybrid_search, kind reclassification, per-course comparison retrieval. Search alone 0.06-0.16 s median |
 | 2026-11-10 | 0dd3da9 | 15/15 | 3/3 | — | 2.7 s median, 4.5 s max | 321 docs / 4,905 chunks (textbooks removed). Ranks slipped: math-compre-weight 10, phy-compre-date 9 (still in top 40, answered correctly) |
 | 2026-11-10 | p1 | 15/15 | 3/3 | — | 2.3 s median, 3.9 s max | Corpus now includes the testing session's bulk PDFs; + course code in the question selects that course |

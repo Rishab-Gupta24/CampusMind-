@@ -340,7 +340,7 @@ alter table unanswered enable row level security;
 
 ### 4.2 Hybrid search function (`0002_hybrid_search.sql`)
 
-> **Current version: `0012_hybrid_search_hnsw.sql`.** Same signature and output. The semantic half orders by `embedding::halfvec(1024) <=> query` on the HNSW index `chunks_embedding_hv_idx` (0011) with `hnsw.iterative_scan = relaxed_order`, so status, course and source filters apply during the index walk; the full-text half ORs the query terms over the GIN index. Execute is granted to `service_role` only. The SQL below is the original design.
+> **Current version: `0014_hybrid_search_rarest_term.sql`** (PL/pgSQL; 0013 + one rule). Same signature and output. Each call builds its query with only the filters given (dynamic SQL), so it is planned with real values; a SQL-language function got one generic plan that exact-scanned every embedding at ~25k chunks. Semantic half: scopes of at most 1000 chunks use exact distances; larger scopes use the HNSW index `chunks_embedding_hv_idx` (0011) on `embedding::halfvec(1024)` with `hnsw.iterative_scan = relaxed_order` (the scope filter is written as `source_id::text = any(...)` so the planner can't fall back to `chunks_source_idx`). Full-text half: rows are matched on the question's rare terms only (in at most 2% of chunks according to `pg_stats` for `chunks.fts`, or the single rarest term if none qualify) and ranked with `ts_rank_cd` on all terms, ORed. Execute is granted to `service_role` only. The SQL below is the original design.
 
 ```sql
 create or replace function hybrid_search(
