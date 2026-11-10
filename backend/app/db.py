@@ -1,15 +1,23 @@
 """The only place that talks to Supabase. Uses the service-role key (server side only)."""
 
 import json
+import time
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+import httpx
+from postgrest.exceptions import APIError
 from supabase import Client, create_client
 
 from app.config import get_settings
 
-UPSERT_BATCH = 100
+# PostgREST runs with statement_timeout=8s; with >10k chunks a 100-row insert into the
+# vector index can exceed it, so batches stay small and transient failures are retried.
+UPSERT_BATCH = 25
+UPSERT_ATTEMPTS = 4
+RETRY_DELAY_S = 2.0
+_TIMEOUT_CODE = "57014"
 SIGNED_URL_SECONDS = 3600
 
 Row = dict[str, Any]
@@ -37,10 +45,25 @@ def count_chunks() -> int:
     return result.count or 0
 
 
+def _is_transient(exc: Exception) -> bool:
+    """Dropped HTTP/2 connections and statement timeouts are worth retrying; anything else is not."""
+    if isinstance(exc, httpx.TransportError):
+        return True
+    return isinstance(exc, APIError) and exc.code == _TIMEOUT_CODE
+
+
 def upsert_chunks(rows: list[Row]) -> None:
     table = get_client().table("chunks")
     for start in range(0, len(rows), UPSERT_BATCH):
-        table.upsert(rows[start : start + UPSERT_BATCH]).execute()
+        batch = rows[start : start + UPSERT_BATCH]
+        for attempt in range(1, UPSERT_ATTEMPTS + 1):
+            try:
+                table.upsert(batch).execute()
+                break
+            except Exception as exc:
+                if attempt == UPSERT_ATTEMPTS or not _is_transient(exc):
+                    raise
+                time.sleep(RETRY_DELAY_S * attempt)
 
 
 def delete_chunks(source_id: str) -> None:
