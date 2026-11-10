@@ -51,3 +51,22 @@ def test_ics_has_events_alarms_and_folding() -> None:
     assert ics.count("BEGIN:VALARM") == 2 and "TRIGGER:-P1D" in ics
     long_line = "DESCRIPTION:" + "x" * 200
     assert all(len(part.encode()) <= 75 for part in _fold(long_line).split("\r\n"))
+
+
+def test_parse_time_with_dotted_am_pm() -> None:
+    assert parse_time("by 28.4.2014 up to 3.00 p.m.") == (time(15, 0), False)
+    assert parse_time("at 5.30 p.m.") == (time(17, 30), False)
+    assert parse_time("10 a.m.") == (time(10, 0), False)
+    assert parse_time("12.30 P.M.") == (time(12, 30), False)
+
+
+def test_past_dates_are_not_suggested() -> None:
+    from app.ingest.deadlines import _is_past
+
+    assert _is_past("2014-08-16T12:30:00+04:00")
+    assert not _is_past("2099-01-01T09:00:00+04:00")
+
+
+def test_dates_are_not_read_as_clock_times() -> None:
+    assert parse_time("14.05.2023") == (None, True)
+    assert parse_time("on 28.4.2014") == (None, True)

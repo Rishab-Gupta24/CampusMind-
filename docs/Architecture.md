@@ -340,6 +340,8 @@ alter table unanswered enable row level security;
 
 ### 4.2 Hybrid search function (`0002_hybrid_search.sql`)
 
+> **Current version: `0012_hybrid_search_hnsw.sql`.** Same signature and output. The semantic half orders by `embedding::halfvec(1024) <=> query` on the HNSW index `chunks_embedding_hv_idx` (0011) with `hnsw.iterative_scan = relaxed_order`, so status, course and source filters apply during the index walk; the full-text half ORs the query terms over the GIN index. Execute is granted to `service_role` only. The SQL below is the original design.
+
 ```sql
 create or replace function hybrid_search(
   query_text text,

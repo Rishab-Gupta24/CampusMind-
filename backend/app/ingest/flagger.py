@@ -4,7 +4,6 @@ A moment is flagged only when both steps agree (Rules.md §1.6). Cue phrases mat
 boundaries, so "exam" never matches "example".
 """
 
-import json
 import logging
 import re
 from typing import TypedDict
@@ -12,6 +11,7 @@ from typing import TypedDict
 from app.ingest.chunker import Chunk
 from app.ingest.transcriber import Segment
 from app.llm.base import LLMError, get_provider
+from app.llm.json_utils import parse_json_object
 from app.rag.prompts import FLAG_CHECK_SYSTEM, FLAG_CHECK_USER
 
 log = logging.getLogger(__name__)
@@ -63,16 +63,7 @@ def context_window(segments: list[Segment], index: int) -> str:
 
 
 def parse_verdict(raw: str) -> tuple[bool, str]:
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", raw, re.DOTALL)
-        if not match:
-            return False, ""
-        try:
-            data = json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return False, ""
+    data = parse_json_object(raw)
     is_flag = data.get("is_flag") is True
     reason = str(data.get("reason") or "").strip().rstrip(".")
     # No flag without a reason.

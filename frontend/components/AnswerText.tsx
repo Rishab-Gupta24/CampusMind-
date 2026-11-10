@@ -17,6 +17,27 @@ function linkCitations(text: string): string {
     .join("");
 }
 
+/** A table row that holds only citations (`| [1] | | |`) becomes a line after the table instead of an empty row. */
+function liftCitationRows(text: string): string {
+  const lines = text.split("\n");
+  const out: string[] = [];
+  let lifted: string[] = [];
+  for (const line of lines) {
+    const isRow = /^\s*\|.*\|\s*$/.test(line);
+    if (isRow && /^[\s|]*(\[\d+\][\s|]*)+$/.test(line)) {
+      lifted.push(...(line.match(/\[\d+\]/g) ?? []));
+      continue;
+    }
+    if (!isRow && lifted.length) {
+      out.push("", lifted.join(""));
+      lifted = [];
+    }
+    out.push(line);
+  }
+  if (lifted.length) out.push("", lifted.join(""));
+  return out.join("\n");
+}
+
 /** Answer Markdown: paragraphs, lists, tables, and LaTeX math, with `[n]` opening the matching source. */
 export function AnswerText({
   text,
@@ -83,7 +104,7 @@ export function AnswerText({
         rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: "ignore" }]]}
         components={components}
       >
-        {linkCitations(text)}
+        {linkCitations(liftCitationRows(text))}
       </ReactMarkdown>
     </div>
   );

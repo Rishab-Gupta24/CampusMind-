@@ -23,7 +23,12 @@ TYPE_LABEL = {"exam": "Exam", "quiz": "Quiz", "assignment": "Due", "deadline": "
 
 def _escape(text: str) -> str:
     return (
-        text.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\r\n", "\\n").replace("\n", "\\n")
+        text.replace("\\", "\\\\")
+        .replace(";", "\\;")
+        .replace(",", "\\,")
+        .replace("\r\n", "\\n")
+        .replace("\n", "\\n")
+        .replace("\r", "\\n")
     )
 
 

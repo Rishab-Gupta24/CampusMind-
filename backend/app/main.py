@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -49,12 +50,31 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="CampusMind API", lifespan=lifespan)
+
+UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+CLIENT_HEADER = "x-campusmind"
+
+
+@app.middleware("http")
+async def require_client_header(request: Request, call_next):
+    """Block cross-site requests: a custom header forces the browser's CORS preflight, which only our app passes.
+
+    Without it any website open in the same browser could POST a multipart upload to localhost:8000.
+    """
+    if request.method in UNSAFE_METHODS and request.headers.get(CLIENT_HEADER) != "1":
+        return JSONResponse(status_code=403, content={"error": "Requests must come from the CampusMind app."})
+    return await call_next(request)
+
+
+# Middleware runs outermost-last: host check, then CORS (answers preflights), then the header check above.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_origin],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.allowed_origins,
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["Content-Type", "Accept", "X-CampusMind"],
 )
+# Rejects DNS-rebinding: a hostile domain resolved to 127.0.0.1 still sends its own Host header.
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "[::1]"])
 
 
 @app.exception_handler(StarletteHTTPException)
