@@ -16,6 +16,7 @@ from app.config import get_settings
 # PostgREST runs with statement_timeout=8s; with >10k chunks a 100-row insert into the
 # vector index can exceed it, so batches stay small and transient failures are retried.
 UPSERT_BATCH = 25
+DELETE_BATCH = 100  # ids go in the URL (~45 chars each)
 UPSERT_ATTEMPTS = 4
 RETRY_DELAY_S = 2.0
 _TIMEOUT_CODE = "57014"
@@ -53,22 +54,47 @@ def _is_transient(exc: Exception) -> bool:
     return isinstance(exc, APIError) and exc.code == _TIMEOUT_CODE
 
 
+def _upsert_batch(table: Any, batch: list[Row]) -> None:
+    """Retry transient failures; on a statement timeout, split the batch so each insert is shorter.
+    At ~25k chunks a 25-row insert into the vector index can take longer than PostgREST's 8 s."""
+    for attempt in range(1, UPSERT_ATTEMPTS + 1):
+        try:
+            table.upsert(batch).execute()
+            return
+        except Exception as exc:
+            if not _is_transient(exc):
+                raise
+            if isinstance(exc, APIError) and len(batch) > 1:
+                half = len(batch) // 2
+                _upsert_batch(table, batch[:half])
+                _upsert_batch(table, batch[half:])
+                return
+            if attempt == UPSERT_ATTEMPTS:
+                raise
+            time.sleep(RETRY_DELAY_S * attempt)
+
+
 def upsert_chunks(rows: list[Row]) -> None:
     table = get_client().table("chunks")
     for start in range(0, len(rows), UPSERT_BATCH):
-        batch = rows[start : start + UPSERT_BATCH]
+        _upsert_batch(table, rows[start : start + UPSERT_BATCH])
+
+
+def delete_chunks(source_id: str) -> None:
+    """Delete in small batches: one DELETE of a 2.5k-chunk textbook outlasts the 8 s statement timeout."""
+    while True:
+        rows = get_client().table("chunks").select("id").eq("source_id", source_id).limit(DELETE_BATCH).execute().data
+        if not rows:
+            return
+        ids = [r["id"] for r in rows]
         for attempt in range(1, UPSERT_ATTEMPTS + 1):
             try:
-                table.upsert(batch).execute()
+                get_client().table("chunks").delete().in_("id", ids).execute()
                 break
             except Exception as exc:
                 if attempt == UPSERT_ATTEMPTS or not _is_transient(exc):
                     raise
                 time.sleep(RETRY_DELAY_S * attempt)
-
-
-def delete_chunks(source_id: str) -> None:
-    get_client().table("chunks").delete().eq("source_id", source_id).execute()
 
 
 # ---------- sources ----------
@@ -119,6 +145,7 @@ def list_sources(source_type: str, course_id: str | None = None) -> list[Row]:
 def delete_source(source_id: str) -> None:
     # Unconfirmed date suggestions die with their document; confirmed events stay (source_id becomes null).
     get_client().table("events").delete().eq("source_id", source_id).eq("status", "suggested").execute()
+    delete_chunks(source_id)  # batched first; the cascade alone times out on a textbook
     get_client().table("sources").delete().eq("id", source_id).execute()
 
 
