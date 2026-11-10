@@ -109,6 +109,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Bug | Cause | Fix | Status |
 | --- | --- | --- | --- | --- |
+| 2026-11-10 | Quiz search hit 8 s timeout even after textbook removal | 19.7k dead rows in `chunks`, autovacuum not run; exact-scan `hybrid_search` read them all | `vacuum (index_cleanup off, analyze) chunks` (full vacuum times out on free tier because HNSW cleanup is slow); cold search 6.5 s → 1.5 s, median ~1.0 s. Table still 305 MB on disk until `REINDEX` of `chunks_embedding_idx` (do with task 2.10) | Fixed |
 | 2026-11-10 | Large textbooks failed: Postgres 57014 statement timeout on chunk upsert | PostgREST `statement_timeout=8s`; 100-row HNSW inserts too slow above ~10k chunks | Batch 25 + retry | Fixed |
 | 2026-11-10 | Random 'Server disconnected' / HTTP 500 on uploads | Supabase drops idle HTTP/2 connections | Retry in `upsert_chunks`; other DB calls still unprotected | Partly fixed |
 | 2026-11-10 | PDFs > 50 MB after compression fail at Storage upload (400) | Free-tier 50 MB per-file limit | Not fixed: Introduction to Mechanics (58 MB), Maths Solutions Manual (63 MB) left out | Open |
@@ -166,6 +167,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 - Flagger (3.1): match cue phrases on word boundaries — "exam" must not match "example".
 - Tasks 1.2/1.3 checks were run on generated TEST files; re-check page numbers and transcript on the real D.1/D.2 files.
 - Changing `EMBED_MODEL` → delete all `chunks` rows and re-embed every source.
+- After deleting many chunks, run `vacuum (index_cleanup off, analyze) chunks;` (plain VACUUM times out on the free tier); search exact-scans dead rows otherwise.
 - Supabase free projects pause after 1 week idle → open the dashboard before each round.
 - Pre-process all demo files before going on stage; never transcribe live.
 - Wi-Fi backup: phone hotspot; or local Supabase (`supabase start`) with the same migrations and a `.env` URL change.
