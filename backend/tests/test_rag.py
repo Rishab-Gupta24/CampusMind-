@@ -149,6 +149,7 @@ def test_clean_text_removes_nul_and_control_chars() -> None:
 
 def test_mcq_check_keeps_only_single_correct(monkeypatch) -> None:
     import asyncio
+    import json
 
     from app.rag import study
 
@@ -159,11 +160,16 @@ def test_mcq_check_keeps_only_single_correct(monkeypatch) -> None:
         async def generate(self, *_: object, **__: object) -> str:
             return self.reply
 
+    def verdicts(*correct: int) -> str:
+        return json.dumps({"options": [{"index": i, "reason": "r", "correct": i in correct} for i in range(4)]})
+
     q = {"type": "mcq", "question": "P(A|B)?", "options": ["a", "b", "c", "d"], "answer": 1, "source": {"excerpt": "x"}}
     for reply, expected in [
-        ('{"correct": [1]}', True),
-        ('{"correct": [0, 1]}', False),
-        ('{"correct": [2]}', False),
+        (verdicts(1), True),
+        (verdicts(0, 1), False),
+        (verdicts(2), False),
+        (verdicts(), False),
+        ('{"options": [{"index": 1, "correct": true}]}', True),  # incomplete reply: keep
         ("garbage", True),
     ]:
         monkeypatch.setattr(study, "get_provider", lambda r=reply: Fake(r))

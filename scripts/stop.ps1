@@ -7,8 +7,11 @@ function Stop-Port($port, $match, $name) {
     foreach ($c in $conns) {
         $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$($c.OwningProcess)"
         if ($proc.CommandLine -match $match) {
-            # Stop the listener and its launcher parent (venv python / cmd wrapper).
+            # Stop the listener, its worker children (uvicorn --reload spawns one that keeps the port)
+            # and its launcher parent (venv python / cmd wrapper).
             $parent = Get-CimInstance Win32_Process -Filter "ProcessId=$($proc.ParentProcessId)"
+            Get-CimInstance Win32_Process -Filter "ParentProcessId=$($proc.ProcessId)" |
+                ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
             Stop-Process -Id $proc.ProcessId -Force
             if ($parent -and $parent.CommandLine -match $match) { Stop-Process -Id $parent.ProcessId -Force }
             Write-Host "  Stopped $name (PID $($proc.ProcessId))"
