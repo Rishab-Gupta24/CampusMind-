@@ -2,6 +2,7 @@
 
 import json
 import time
+from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -116,6 +117,8 @@ def list_sources(source_type: str, course_id: str | None = None) -> list[Row]:
 
 
 def delete_source(source_id: str) -> None:
+    # Unconfirmed date suggestions die with their document; confirmed events stay (source_id becomes null).
+    get_client().table("events").delete().eq("source_id", source_id).eq("status", "suggested").execute()
     get_client().table("sources").delete().eq("id", source_id).execute()
 
 
@@ -293,6 +296,10 @@ def list_events(
         query = query.lte("due_at", end)
     if not include_suggested:
         query = query.eq("status", "confirmed")
+    else:
+        # Suggestions only matter while they are upcoming; confirmed events always show.
+        since = (datetime.now(UTC) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        query = query.or_(f"status.eq.confirmed,due_at.gte.{since}")
     return query.execute().data
 
 

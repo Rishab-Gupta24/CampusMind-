@@ -7,7 +7,7 @@ FN/AN sessions), so a date is never invented by the model. Students confirm sugg
 import json
 import logging
 import re
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta, timezone
 from typing import Any
 
 from app import db
@@ -21,7 +21,10 @@ SESSION_TIMES = {"FN": time(9, 0), "AN": time(14, 0)}  # BITS forenoon / afterno
 DATE_HINT = re.compile(r"\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b|\b\d{1,2}\s+[A-Za-z]{3,9}\.?\s+\d{4}\b")
 _NUMERIC = re.compile(r"^\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})")
 _TEXTUAL = re.compile(r"^\s*(\d{1,2})\s+([A-Za-z]{3,9})\.?,?\s+(\d{4})")
-_CLOCK = re.compile(r"(\d{1,2})[:.](\d{2})\s*(am|pm)?|(\d{1,2})\s*(am|pm)", re.IGNORECASE)
+# Lookarounds keep dates like 28.4.2014 or 14.05.2023 from being read as 4:20 or 14:05.
+_CLOCK = re.compile(
+    r"(?<![\d.])(\d{1,2})[:.](\d{2})(?!\d|\.\d)\s*(am|pm)?|(?<![\d.])(\d{1,2})\s*(am|pm)\b", re.IGNORECASE
+)
 MONTHS = {
     m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)
 }
@@ -52,7 +55,8 @@ def parse_time(text: str) -> tuple[time | None, bool]:
     for session, start in SESSION_TIMES.items():
         if re.search(rf"\b{session}\b", upper):
             return start, False
-    m = _CLOCK.search(text)
+    # "3.00 p.m." / "10 a.m." -> "3.00 pm" / "10 am"
+    m = _CLOCK.search(re.sub(r"\b([ap])\.\s?m\b\.?", r"\1m", text, flags=re.IGNORECASE))
     if not m:
         return None, True
     if m.group(1):
@@ -96,6 +100,17 @@ def _parse_json(raw: str) -> dict[str, Any]:
             return {}
 
 
+def _is_past(due_at: str) -> bool:
+    """Old dates (sample letters, last year's handout) are not deadlines worth suggesting."""
+    try:
+        due = datetime.fromisoformat(due_at)
+    except ValueError:
+        return True
+    if due.tzinfo is None:
+        due = due.replace(tzinfo=UTC)
+    return due < datetime.now(UTC) - timedelta(days=1)
+
+
 async def extract_events(source_id: str) -> list[dict[str, Any]]:
     """Read pages that contain dates, extract events, store new ones as 'suggested'. Returns stored rows."""
     source = db.get_source(source_id)
@@ -130,7 +145,7 @@ async def extract_events(source_id: str) -> list[dict[str, Any]]:
             event = to_event(item)
             # The evidence must really be on the page: the model may not invent a date.
             evidence = str(item.get("date") or "")
-            if event and evidence and evidence in " ".join(texts):
+            if event and evidence and evidence in " ".join(texts) and not _is_past(event["due_at"]):
                 found.append({**event, "page": page})
 
     stored = []
