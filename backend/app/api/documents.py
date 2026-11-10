@@ -7,7 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Uploa
 
 from app import db
 from app.ingest import pipeline
-from app.ingest.prepare import save_upload
+from app.ingest.prepare import content_matches, save_upload
 
 router = APIRouter()
 
@@ -64,6 +64,10 @@ async def upload_document(
     except HTTPException:
         db.update_source(source_id, {"status": "failed", "error": "The file was too large."})
         raise
+    if not content_matches(upload_path, suffix):
+        upload_path.unlink(missing_ok=True)
+        db.update_source(source_id, {"status": "failed", "error": "That file isn't a real PDF or image."})
+        raise HTTPException(status_code=415, detail="That file isn't a real PDF or image.")
     background.add_task(pipeline.process_document, source_id, upload_path)
     return {"source_id": source_id, "status": "processing"}
 

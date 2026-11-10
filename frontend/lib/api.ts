@@ -1,6 +1,8 @@
 // The only way the frontend talks to the backend (Rules.md §1.24). Types follow the backend responses.
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+// The backend rejects state-changing requests without this header (blocks cross-site requests).
+const CLIENT_HEADER = "X-CampusMind";
 
 const OFFLINE = "CampusMind can't reach the server. Check that the backend is running.";
 const GENERIC = "Something went wrong. Please try again.";
@@ -199,7 +201,9 @@ export class ApiError extends Error {}
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, init);
+    const headers = new Headers(init?.headers);
+    headers.set(CLIENT_HEADER, "1");
+    res = await fetch(`${API_URL}${path}`, { ...init, headers });
   } catch {
     throw new ApiError(OFFLINE);
   }
@@ -252,7 +256,7 @@ export async function ask(req: AskRequest, handlers: AskHandlers, signal?: Abort
   try {
     res = await fetch(`${API_URL}/api/ask`, {
       ...json(req),
-      headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+      headers: { "Content-Type": "application/json", Accept: "text/event-stream", [CLIENT_HEADER]: "1" },
       signal,
     });
   } catch (err) {
@@ -301,6 +305,7 @@ export function upload(
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `${API_URL}${path}`);
+    xhr.setRequestHeader(CLIENT_HEADER, "1");
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(e.loaded / e.total);
     };

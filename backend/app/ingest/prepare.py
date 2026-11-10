@@ -49,6 +49,30 @@ async def save_upload(upload: UploadFile, dest: Path) -> int:
     return written
 
 
+# File signatures for document uploads: the extension alone is the client's claim.
+_SIGNATURES = {
+    ".pdf": (b"%PDF-",),
+    ".png": (bytes.fromhex("89504e470d0a1a0a"),),
+    ".jpg": (bytes.fromhex("ffd8ff"),),
+    ".jpeg": (bytes.fromhex("ffd8ff"),),
+    ".webp": (b"RIFF",),
+}
+
+
+def content_matches(path: Path, suffix: str) -> bool:
+    """True if the file starts with the signature its extension promises (PDF and images only)."""
+    signatures = _SIGNATURES.get(suffix.lower())
+    if signatures is None:
+        return True
+    with path.open("rb") as handle:
+        head = handle.read(1024)
+    if suffix.lower() == ".pdf":
+        return b"%PDF-" in head  # some generators put a few bytes before the header
+    if suffix.lower() == ".webp":
+        return head.startswith(b"RIFF") and head[8:12] == b"WEBP"
+    return head.startswith(signatures)
+
+
 def ffmpeg_path() -> str:
     path = shutil.which("ffmpeg")
     if path is None:
