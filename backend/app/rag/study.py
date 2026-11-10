@@ -275,15 +275,19 @@ async def mcq_is_sound(q: dict[str, Any]) -> bool:
                 },
             ],
             temperature=0.0,
-            max_tokens=40,
+            max_tokens=400,
             json_mode=True,
         )
     except LLMError:
         return True
-    correct = _parse_json(raw).get("correct")
-    if not isinstance(correct, list):
+    verdicts = _parse_json(raw).get("options")
+    if not isinstance(verdicts, list) or len(verdicts) != len(q["options"]):
         return True
-    marked = {int(c) for c in correct if isinstance(c, int | str) and str(c).isdigit()}
+    marked = {
+        int(v["index"])
+        for v in verdicts
+        if isinstance(v, dict) and v.get("correct") is True and str(v.get("index")).isdigit()
+    }
     return marked == {q["answer"]}
 
 
