@@ -1,5 +1,5 @@
 import uuid
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -18,7 +18,7 @@ class QuizRequest(BaseModel):
     course_id: uuid.UUID | None = None
     section_id: uuid.UUID | None = None
     lecture_id: uuid.UUID | None = None
-    exclude: list[str] = Field(default_factory=list, max_length=40)
+    exclude: list[Annotated[str, Field(max_length=300)]] = Field(default_factory=list, max_length=40)
 
 
 class FlashcardRequest(BaseModel):

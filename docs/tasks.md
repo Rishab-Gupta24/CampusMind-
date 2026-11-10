@@ -223,7 +223,9 @@ flowchart LR
   - Adjust chunk size, `MIN_RELEVANCE`, `TOP_K_*`, prompt wording until **≥ 13/15 correct and 3/3 refused**. Log each attempt in `memory.md`.
 
 - [ ] **2.10 Index-based hybrid search, then re-add textbooks** (P1, after Round 1)
-  - Rewrite `hybrid_search` in a new migration to use the HNSW index (pgvector 0.8.2: `hnsw.iterative_scan` for filtered scans) and the GIN `fts` index instead of exact-scanning all candidates.
+  - [x] Search rewritten (2026-11-10, migrations 0011 + 0012): half-precision HNSW index + iterative scans, GIN full-text. 0.06-0.16 s median at 4.9k chunks (was 1-7.5 s); eval 15/15 + 3/3; DB 317 MB -> 122 MB.
+  - [ ] Re-ingest the textbooks and confirm the Check below at ~25k chunks.
+  - Original plan: rewrite `hybrid_search` in a new migration to use the HNSW index (pgvector 0.8.2: `hnsw.iterative_scan` for filtered scans) and the GIN `fts` index instead of exact-scanning all candidates.
   - Re-run the eval; then re-ingest the 12 textbooks removed on 2026-11-10 (Cengel + solutions, Fundamentals of Physics, Thomas Calculus, Atkins, Hanly C, Anton, Devore + solutions, TRW, Brown Complex Variables, EG textbook) from the BITS Materials Drive.
   - **Check:** search < 1 s median at ~25k chunks; unscoped queries never hit the 8 s timeout; eval score not lower.
 

@@ -174,3 +174,48 @@ def test_mcq_check_keeps_only_single_correct(monkeypatch) -> None:
     ]:
         monkeypatch.setattr(study, "get_provider", lambda r=reply: Fake(r))
         assert asyncio.run(study.mcq_is_sound(q)) is expected
+
+
+def test_past_paper_titles_are_recognised() -> None:
+    from app.rag.study import _PAST_PAPER
+
+    for title in [
+        "Thermodynamics - Thermodynamics PYQs - Thermo 2025-26 SEM I",
+        "P&S 2021-2022 SEM II PYQ",
+        "C Programming - Answer Keys - 2024-25 II Sem Quiz Ans Key",
+        "General Chemistry - Answer Keys - part c(AK)",
+        "SCANNED P&S Midsem Marking Scheme",
+        "Workshop Practice - Midterm WP_II Sem_22-23",
+    ]:
+        assert _PAST_PAPER.search(title), title
+    for title in ["MATH F113 Handout", "Thermodynamics - PPTs - Lecture 6 - 13 Pure Substances", "Physics Lab Manual"]:
+        assert not _PAST_PAPER.search(title), title
+
+
+def test_comparison_keeps_best_official_passage_of_each_course() -> None:
+    from app.rag.answerer import select_passages
+
+    material = [
+        _passage(f"pyq{i}", 0.99 - i * 0.01, kind="material", source_id=f"s{i}", course_id="math") for i in range(6)
+    ]
+    math_ho = _passage("math-ho", 0.30, kind="handout", source_id="hm", course_id="math")
+    phy_ho = _passage("phy-ho", 0.20, kind="handout", source_id="hp", course_id="phy")
+    chosen = select_passages([*material, math_ho, phy_ho], k=5, courses=["math", "phy"])
+    ids = [p["chunk_id"] for p in chosen]
+    assert len(chosen) == 5
+    assert "math-ho" in ids and "phy-ho" in ids
+
+
+def test_quiz_questions_drop_source_lead_ins() -> None:
+    from app.rag.study import _exam_voice
+
+    assert _exam_voice("According to the passage, what happens when two events are disjoint?") == (
+        "What happens when two events are disjoint?"
+    )
+    assert _exam_voice("In the context of the radar example, what is the false alarm rate?") == (
+        "What is the false alarm rate?"
+    )
+    assert _exam_voice("What analogy is used in the passage for probabilities?") == (
+        "What analogy is used in the source for probabilities?"
+    )
+    assert _exam_voice("State Bayes' rule.") == "State Bayes' rule."

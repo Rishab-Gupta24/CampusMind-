@@ -94,6 +94,10 @@ npm run dev
 
 Open <http://localhost:3000>. While `NEXT_PUBLIC_USE_MOCK=true`, the frontend uses mock data and doesn't need the backend.
 
+**Security:** the backend only answers on localhost and rejects state-changing requests that don't come from the app. Scripts that call the API (uploads, events) must send the header `X-CampusMind: 1`.
+
+**Lecture processing time:** speech-to-text runs on the CPU; a 50-minute lecture takes about 15 minutes. Process demo lectures before presenting.
+
 ## Status
 
 Phase 0 (setup) is in progress. See [docs/tasks.md](docs/tasks.md).

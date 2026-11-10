@@ -166,6 +166,20 @@ def process_lecture(source_id: str, upload_path: Path, title: str) -> None:
         prepare.cleanup(upload_path, audio)
 
 
+def refresh_lecture(source_id: str) -> None:
+    """Re-run flags, chunks and notes from the stored transcript (after a prompt change; no re-transcription)."""
+    source = db.get_source(source_id)
+    if source is None or source["type"] != "lecture":
+        raise ValueError(f"{source_id} is not a lecture")
+    stored = db.download_json(transcript_storage_path(source_id))
+    segments: list[Segment] = [{"start": t["start_s"], "end": t["end_s"], "text": t["text"]} for t in stored]
+    db.update_source(source_id, {"status": "processing", "error": None})
+    try:
+        _lecture_intelligence(source_id, source["title"], segments, float(source.get("duration_s") or 0))
+    except Exception as exc:  # noqa: BLE001 — every failure must end as status 'failed'
+        _fail(source_id, exc)
+
+
 def reprocess_lecture(source_id: str) -> None:
     """Re-run transcription, flags, embeddings and notes from the stored audio (no new upload)."""
     source = db.get_source(source_id)
