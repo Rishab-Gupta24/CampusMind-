@@ -20,6 +20,8 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Decision | Reason |
 | --- | --- | --- |
+| 2026-11-10 | Textbooks removed from the KB for Round 1; re-add only after hybrid_search uses indexes | With 12 textbooks (19.7k of 24.5k chunks) the exact-scan hybrid_search took 1–5.5 s and unscoped queries hit the 8 s PostgREST timeout |
+| 2026-11-10 | KB budget: stop bulk ingest at ~24k chunks / ~400 MB DB | Free tier: 500 MB DB (read-only when full), 1 GB storage, 50 MB per stored file; ~16 KB per chunk |
 | 2026-11-10 | Installable app (PWA): `app/manifest.ts`, icons in `public/icons`, `public/sw.js` (offline page + system notifications; caches nothing else), registered only in production builds | 'Make this app': own window and icon, notifications through the service worker |
 | 2026-11-10 | One-click launcher `CampusMind.bat` → `scripts/start.ps1` (starts only what isn't running; Ollama with 2 model slots; production Next build) + `CampusMind-stop.bat` | Demo laptop: one double-click, no terminals |
 | 2026-11-10 | On backend start, sources still 'processing' are marked failed ('interrupted, upload again') | Background uploads die with the process; they stayed 'processing' forever |
@@ -88,6 +90,9 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Change | Files |
 | --- | --- | --- |
+| 2026-11-10 | Bulk ingest from the shared BITS Materials Drive (1st year only): 499 files downloaded, 305 text PDFs ready; 165 scanned skipped (OCR off for the run), 17 duplicates of the zip test set. KB now **321 ready docs, 4,905 chunks, DB 317 MB, storage 271 MB**. Retrieval probe over 13 courses: relevant top hits for every course, median ~1.1 s | Supabase data |
+| 2026-11-10 | Seed: all 13 1st-year courses (MATH F111/F112, EEE F111, ME F110/F112, BIO F111, CHEM F111, BITS F111/F112 added) | `supabase/seed.sql` |
+| 2026-11-10 | `upsert_chunks`: batches of 25 + retry on dropped connections and statement timeouts; 4 unit tests | `backend/app/db.py`, `backend/tests/test_db_upsert.py` |
 | 2026-11-10 | P1: rich answers, quiz + flashcards (Practice page), OCR, calendar (events API, extraction, ICS, page, reminders), pitch draft | `backend/app/rag/{study,prompts,answerer}.py`, `backend/app/ingest/{ocr,deadlines,pdf_loader}.py`, `backend/app/api/{study,events}.py`, `backend/app/calendar_ics.py`, `frontend/app/{practice,calendar}`, `docs/pitch.md` |
 | 2026-11-09 | Phases 4–5: Ask thread (scope, examples, streaming, chips, source panel, feedback), course selector, Lectures list + upload card with live stages, lecture detail (Summary/Flagged/Transcript/Ask, audio bar, `?t=` deep links), Flagged page, Sources (documents table + add/delete, Insights) | `frontend/app/*`, `frontend/components/*`, `frontend/lib/*` |
 | 2026-11-09 | Phase 3: flagger (cue regex + LLM JSON check), lecture notes (parts + combine), `reprocess_lecture()`, `GET /api/flagged`, `GET /api/insights`; lecture detail uses exact moments | `backend/app/ingest/{flagger,lecture_notes,pipeline}.py`, `backend/app/api/{flagged,insights,lectures}.py` |
@@ -104,6 +109,10 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Bug | Cause | Fix | Status |
 | --- | --- | --- | --- | --- |
+| 2026-11-10 | Large textbooks failed: Postgres 57014 statement timeout on chunk upsert | PostgREST `statement_timeout=8s`; 100-row HNSW inserts too slow above ~10k chunks | Batch 25 + retry | Fixed |
+| 2026-11-10 | Random 'Server disconnected' / HTTP 500 on uploads | Supabase drops idle HTTP/2 connections | Retry in `upsert_chunks`; other DB calls still unprotected | Partly fixed |
+| 2026-11-10 | PDFs > 50 MB after compression fail at Storage upload (400) | Free-tier 50 MB per-file limit | Not fixed: Introduction to Mechanics (58 MB), Maths Solutions Manual (63 MB) left out | Open |
+| 2026-11-10 | Search 1–5.5 s and unscoped queries time out with 24.5k chunks | `hybrid_search` (0006) exact-scans every candidate, no HNSW/GIN use | Textbooks removed (now ~1.1 s); real fix = index-based search (tasks.md 2.10) | Workaround |
 | 2026-11-10 | Prompt contained a form-feed character instead of `\frac` | `\f` escape in a non-raw Python string written by a script | Raw string; character replaced | Fixed |
 | 2026-11-10 | Quiz LaTeX broke (`\text` became a tab) | Model writes LaTeX in JSON strings without escaping backslashes | Escape backslash commands before `json.loads` | Fixed |
 | 2026-11-10 | Chunk upsert failed with Postgres 22P05 on some PDFs (reported by the testing-materials session) | NUL characters in PDF text | `clean_text()` strips C0 control characters from page and OCR text | Fixed (unit test) |
