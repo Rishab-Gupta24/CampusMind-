@@ -5,12 +5,12 @@ passage really is a past paper; the model's claim alone is never trusted.
 """
 
 import asyncio
-import json
 import re
 from typing import Any, Literal
 
 from app.config import get_settings
 from app.llm.base import LLMError, get_provider
+from app.llm.json_utils import parse_json_object
 from app.rag import reranker
 from app.rag.embedder import embed_query
 from app.rag.priority import apply_boosts
@@ -111,23 +111,8 @@ def _numbered(passages: list[Passage]) -> str:
     return "\n\n".join(blocks)
 
 
-_LATEX_COMMAND = re.compile(r"(?<!\\)\\(?=[A-Za-z]{2,})")
-
-
 def _parse_json(raw: str) -> dict[str, Any]:
-    # Models write LaTeX like \text or \frac inside JSON strings without escaping the backslash;
-    # json.loads would read "\t" as a tab and "\f" as a form feed. Protect backslash commands first.
-    raw = _LATEX_COMMAND.sub(r"\\\\", raw)
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", raw, re.DOTALL)
-        if not match:
-            return {}
-        try:
-            return json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return {}
+    return parse_json_object(raw)
 
 
 def source_of(p: Passage, exam: str = "", number: str = "") -> dict[str, Any]:
@@ -166,6 +151,22 @@ def source_of(p: Passage, exam: str = "", number: str = "") -> dict[str, Any]:
     }
 
 
+_SOURCE_LEADIN = re.compile(
+    r"^(?:according to|based on|as (?:stated|described|mentioned) in|in) (?:the )?(?:provided |given )?"
+    r"(?:passage|text|transcript|lecture|definition provided|context of [^,]*?)\s*(?:provided |given )?,\s*",
+    re.IGNORECASE,
+)
+_SOURCE_WORDS = re.compile(r"\b(?:the )?(?:provided |given )?(passage|transcript)\b", re.IGNORECASE)
+
+
+def _exam_voice(text: str) -> str:
+    """Questions read like an exam: no "According to the passage, ..." (the source is shown under each one)."""
+    stripped = _SOURCE_LEADIN.sub("", text)
+    if stripped != text and stripped:
+        text = stripped[0].upper() + stripped[1:]
+    return _SOURCE_WORDS.sub("the source", text)
+
+
 def _clean_question(q: dict[str, Any], passages: list[Passage]) -> dict[str, Any] | None:
     try:
         n = int(q.get("passage", 0))
@@ -175,7 +176,7 @@ def _clean_question(q: dict[str, Any], passages: list[Passage]) -> dict[str, Any
         return None
     passage = passages[n - 1]
     kind = q.get("type")
-    text = str(q.get("question") or "").strip()
+    text = _exam_voice(str(q.get("question") or "").strip())
     if kind not in ("mcq", "fill", "short") or len(text) < 8:
         return None
     past = is_past_paper(passage)

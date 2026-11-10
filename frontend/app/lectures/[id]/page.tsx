@@ -7,6 +7,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { AskThread } from "@/components/AskThread";
 import { RoleBadge } from "@/components/Badge";
+import { Formula, MathText } from "@/components/MathText";
 import { FlaggedList, Transcript } from "@/components/Transcript";
 import { EmptyNote, ErrorNote, LoadingDots, StatusText, Tabs } from "@/components/ui";
 import { api, type LectureDetail } from "@/lib/api";
@@ -140,7 +141,9 @@ function Lecture() {
                   {lecture.summary ? (
                     <ul className="mt-2 flex flex-col gap-1.5 text-[17px] leading-relaxed">
                       {lecture.summary.split("\n").filter(Boolean).map((line, i) => (
-                        <li key={i}>{line}</li>
+                        <li key={i}>
+                          <MathText text={line} />
+                        </li>
                       ))}
                     </ul>
                   ) : (
@@ -152,7 +155,9 @@ function Lecture() {
                     <h2 className="text-[13px] text-text-2">Key points</h2>
                     <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-[17px] leading-relaxed">
                       {lecture.key_points.map((p, i) => (
-                        <li key={i}>{p}</li>
+                        <li key={i}>
+                          <MathText text={p} />
+                        </li>
                       ))}
                     </ul>
                   </section>
@@ -160,9 +165,11 @@ function Lecture() {
                 {lecture.formulas.length ? (
                   <section className="rounded-card bg-surface p-5">
                     <h2 className="text-[13px] text-text-2">Formulas</h2>
-                    <pre className="mt-2 overflow-x-auto rounded-chip bg-surface-2 p-3 font-mono text-[15px] leading-relaxed whitespace-pre-wrap">
-                      {lecture.formulas.join("\n")}
-                    </pre>
+                    <div className="mt-2 flex flex-col gap-1 rounded-chip bg-surface-2 px-3 py-1">
+                      {lecture.formulas.map((f, i) => (
+                        <Formula key={i} tex={f} />
+                      ))}
+                    </div>
                   </section>
                 ) : null}
               </div>

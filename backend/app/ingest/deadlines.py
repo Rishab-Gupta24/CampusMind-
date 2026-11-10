@@ -4,7 +4,6 @@ The model only copies dates as written; this module parses them (DD.MM.YY, DD.MM
 FN/AN sessions), so a date is never invented by the model. Students confirm suggestions in the UI.
 """
 
-import json
 import logging
 import re
 from datetime import UTC, datetime, time, timedelta, timezone
@@ -12,6 +11,7 @@ from typing import Any
 
 from app import db
 from app.llm.base import get_provider
+from app.llm.json_utils import parse_json_object
 from app.rag.prompts import DEADLINES_SYSTEM, DEADLINES_USER
 
 log = logging.getLogger(__name__)
@@ -90,14 +90,7 @@ def to_event(item: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def _parse_json(raw: str) -> dict[str, Any]:
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", raw, re.DOTALL)
-        try:
-            return json.loads(match.group(0)) if match else {}
-        except json.JSONDecodeError:
-            return {}
+    return parse_json_object(raw)
 
 
 def _is_past(due_at: str) -> bool:
