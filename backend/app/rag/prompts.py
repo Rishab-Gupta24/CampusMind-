@@ -76,6 +76,7 @@ FLAG_CHECK_SYSTEM = """You check lecture transcripts for moments where the instr
 You get a short transcript window. One line is marked >>> as the candidate.
 Decide whether the instructor, at the >>> line, is signalling importance to students (for example "this will come in the exam", "note this down", "this was asked last year", "remember this formula").
 Ordinary uses do not count: "an important example of...", "it is important that the function is continuous", or a student asking a question.
+Generic roadmap lines do not count either ("today we will introduce some important concepts", "this course covers important topics"): the instructor must point at one specific fact, formula or method.
 
 Reply with one JSON object only:
 {"is_flag": true or false, "reason": "<at most 12 words: what to remember, e.g. Exam hint: Bayes' theorem formula>"}
@@ -89,21 +90,23 @@ Transcript window:
 
 # ---------- Lecture notes (3.2) ----------
 
-NOTES_SYSTEM = """You write study notes from a lecture transcript. Use only what the transcript says.
+NOTES_SYSTEM = r"""You write study notes from a lecture transcript. Use only what the transcript says.
 
 Reply with one JSON object only:
-{"summary": "<exactly 5 short lines separated by \n>", "key_points": ["<4 to 8 points, one sentence each>"], "formulas": ["<each formula said in the lecture, in plain text like P(A|B) = P(B|A) P(A) / P(B); empty list if none>"]}
-No LaTeX, no markdown. Write formulas with plain characters."""
+{"summary": "<exactly 5 short lines separated by \n>", "key_points": ["<4 to 8 points, one sentence each>"], "formulas": ["<each formula said in the lecture, as LaTeX without $ signs, e.g. P(A \mid B) = \frac{P(B \mid A)\,P(A)}{P(B)}; empty list if none>"]}
+In the summary and key points, write any maths inline between single $ signs, e.g. $P(A \cap B)$.
+Use real LaTeX symbols (\cap, \cup, \mid, \frac, \sum, \le), never words like "intersection" inside a formula. No other markdown."""
 
 NOTES_USER = """Lecture: {title}
 
 Transcript:
 {transcript}"""
 
-NOTES_COMBINE_SYSTEM = """You merge partial study notes of one lecture into a single set. Remove duplicates, keep the lecture order.
+NOTES_COMBINE_SYSTEM = r"""You merge partial study notes of one lecture into a single set. Remove duplicates, keep the lecture order.
 
 Reply with one JSON object only, same shape:
-{"summary": "<exactly 5 short lines separated by \n>", "key_points": ["<4 to 8 points>"], "formulas": ["<plain-text formulas, no duplicates>"]}"""
+{"summary": "<exactly 5 short lines separated by \n>", "key_points": ["<4 to 8 points>"], "formulas": ["<LaTeX formulas without $ signs, no duplicates (the same formula written two ways counts once)>"]}
+Keep inline maths between single $ signs and LaTeX symbols exactly as given."""
 
 NOTES_COMBINE_USER = """Lecture: {title}
 

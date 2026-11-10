@@ -10,6 +10,7 @@ from typing import TypedDict
 
 from app.ingest.transcriber import Segment
 from app.llm.base import get_provider
+from app.llm.json_utils import parse_json_object
 from app.rag.prompts import NOTES_COMBINE_SYSTEM, NOTES_COMBINE_USER, NOTES_SYSTEM, NOTES_USER
 
 log = logging.getLogger(__name__)
@@ -24,11 +25,7 @@ class Notes(TypedDict):
 
 
 def _parse(raw: str) -> Notes:
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", raw, re.DOTALL)
-        data = json.loads(match.group(0)) if match else {}
+    data = parse_json_object(raw)
     summary = data.get("summary") or ""
     if isinstance(summary, list):
         summary = "\n".join(str(s) for s in summary)

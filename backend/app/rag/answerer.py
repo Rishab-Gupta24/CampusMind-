@@ -158,9 +158,11 @@ MAX_PER_SOURCE = 2
 OFFICIAL_KINDS = ("campus", "handout")
 
 
-def select_passages(boosted: list[Passage], k: int) -> list[Passage]:
+def select_passages(boosted: list[Passage], k: int, courses: list[str] | None = None) -> list[Passage]:
     """Top k by final score, at most MAX_PER_SOURCE per source, always keeping the best official passage.
 
+    For a question that compares courses, the best passage of each named course is kept instead (official
+    first), so every course in the comparison reaches the model.
     Every passage here already passed the relevance gate. The rule is visible: official passages carry
     the Official badge, and the prompt tells the model to prefer them over older course material.
     """
@@ -173,29 +175,66 @@ def select_passages(boosted: list[Passage], k: int) -> list[Passage]:
         per_source[p["source_id"]] = per_source.get(p["source_id"], 0) + 1
         if len(chosen) == k:
             break
-    official = next((p for p in boosted if p.get("kind") in OFFICIAL_KINDS), None)
-    if official is not None and official not in chosen:
-        if len(chosen) == k:
-            chosen.pop()
-        chosen.append(official)
+    must: list[Passage] = []
+    if courses:
+        for cid in courses:
+            in_course = [p for p in boosted if p.get("course_id") == cid]
+            best = next((p for p in in_course if p.get("kind") in OFFICIAL_KINDS), None) or next(iter(in_course), None)
+            if best is not None:
+                must.append(best)
+    else:
+        official = next((p for p in boosted if p.get("kind") in OFFICIAL_KINDS), None)
+        if official is not None:
+            must.append(official)
+    for p in must:
+        if p in chosen:
+            continue
+        if len(chosen) >= k:
+            drop = next((c for c in reversed(chosen) if c not in must), None)
+            if drop is not None:
+                chosen.remove(drop)
+        chosen.append(p)
     return chosen
+
+
+def named_courses(question: str) -> list[str]:
+    """Ids of the known courses whose codes the question names, in order of appearance."""
+    by_code = {code: cid for cid, code in db.course_codes().items()}
+    ids: list[str] = []
+    for a, b in _COURSE_CODE.findall(question):
+        cid = by_code.get(f"{a.upper()} F{b}")
+        if cid and cid not in ids:
+            ids.append(cid)
+    return ids
 
 
 async def _find_passages(
     question: str, scope: Scope, course_id: str | None, section_id: str | None, lecture_id: str | None
 ) -> tuple[list[Passage], float, list[Passage]]:
     settings = get_settings()
-    course_id = await asyncio.to_thread(effective_course, question, course_id)
+    compared = [] if lecture_id else await asyncio.to_thread(named_courses, question)
     vector = await asyncio.to_thread(embed_query, question)
-    candidates = await asyncio.to_thread(
-        retrieve, question, vector, scope, course_id, lecture_id, settings.top_k_retrieve
-    )
+    if len(compared) >= 2:
+        # "Compare MATH F113 and PHY F111": one search per course, or one course crowds out the other.
+        each = max(settings.top_k_retrieve // len(compared), 15)
+        candidates, seen = [], set()
+        for cid in compared:
+            for p in await asyncio.to_thread(retrieve, question, vector, scope, cid, None, each):
+                if p["chunk_id"] not in seen:
+                    seen.add(p["chunk_id"])
+                    candidates.append(p)
+    else:
+        compared = []
+        course_id = await asyncio.to_thread(effective_course, question, course_id)
+        candidates = await asyncio.to_thread(
+            retrieve, question, vector, scope, course_id, lecture_id, settings.top_k_retrieve
+        )
     ranked = await asyncio.to_thread(reranker.rerank, question, candidates)
     best = best_raw_score(ranked)
     # Gate on the raw score first; boosts only re-order what already passed.
     relevant = [p for p in ranked if p["rerank_score"] >= settings.min_relevance]
     boosted = apply_boosts(relevant, section_id)
-    return select_passages(boosted, settings.top_k_final), best, ranked
+    return select_passages(boosted, settings.top_k_final, compared or None), best, ranked
 
 
 async def answer(
