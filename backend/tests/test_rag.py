@@ -174,3 +174,19 @@ def test_mcq_check_keeps_only_single_correct(monkeypatch) -> None:
     ]:
         monkeypatch.setattr(study, "get_provider", lambda r=reply: Fake(r))
         assert asyncio.run(study.mcq_is_sound(q)) is expected
+
+
+def test_past_paper_titles_are_recognised() -> None:
+    from app.rag.study import _PAST_PAPER
+
+    for title in [
+        "Thermodynamics - Thermodynamics PYQs - Thermo 2025-26 SEM I",
+        "P&S 2021-2022 SEM II PYQ",
+        "C Programming - Answer Keys - 2024-25 II Sem Quiz Ans Key",
+        "General Chemistry - Answer Keys - part c(AK)",
+        "SCANNED P&S Midsem Marking Scheme",
+        "Workshop Practice - Midterm WP_II Sem_22-23",
+    ]:
+        assert _PAST_PAPER.search(title), title
+    for title in ["MATH F113 Handout", "Thermodynamics - PPTs - Lecture 6 - 13 Pure Substances", "Physics Lab Manual"]:
+        assert not _PAST_PAPER.search(title), title

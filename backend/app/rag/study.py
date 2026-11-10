@@ -30,7 +30,10 @@ SourceFilter = Literal["all", "past_papers", "notes"]
 
 MAX_PASSAGES = 8
 PASSAGE_WORDS = 260
-_PAST_PAPER = re.compile(r"\b(PYQ|past paper|question paper|previous year)\b", re.IGNORECASE)
+_PAST_PAPER = re.compile(
+    r"\b(PYQs?|past papers?|question papers?|previous year|answer keys?|ans key|AK|marking scheme|midterm)\b",
+    re.IGNORECASE,
+)
 _YEAR = re.compile(r"\b(20\d{2})\s*[-–/]\s*(\d{2,4})\b")
 _SEM = re.compile(r"\bsem(?:ester)?\s*(I{1,2}|1|2)\b", re.IGNORECASE)
 _EXAM_NAME = re.compile(r"\b(mid|compre|comprehensive|quiz|test|exam)", re.IGNORECASE)

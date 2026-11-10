@@ -18,7 +18,13 @@ const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
 function formatWhen(e: CalendarEvent): string {
   const d = new Date(e.due_at);
-  const date = d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  const otherYear = d.getFullYear() !== new Date().getFullYear();
+  const date = d.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    ...(otherYear ? { year: "numeric" } : {}),
+  });
   if (e.all_day) return date;
   return `${date} · ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
 }

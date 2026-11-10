@@ -130,6 +130,8 @@ Return one JSON object only:
 
 Rules:
 - Passages labelled PAST PAPER are real exam papers. For those, copy the original question (you may rewrite formulas in LaTeX) and set from_past_paper true. Use type "short". Do NOT solve past-paper questions: set "answer" to "" and "explanation" to "".
+- Copy a past-paper question only if it is about the topic, and copy it whole with the data it needs (numbers, tables, the setup); skip parts that make no sense on their own.
+- Every question must test the topic itself. Never ask about story details (names, places, limits or amounts in a word problem) that need no knowledge of the topic.
 - For other passages, write NEW questions that test understanding, and set from_past_paper false. Mix types: mostly mcq, some fill (use ____ for the blank) and short.
 - Every fact in a question, option, answer and explanation must come from its passage. Never invent numbers, dates or names.
 - MCQ distractors must be plausible and clearly wrong according to the passage. Exactly one correct option.
