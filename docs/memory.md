@@ -97,6 +97,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 | 2026-11-09 | Phases 4–5: Ask thread (scope, examples, streaming, chips, source panel, feedback), course selector, Lectures list + upload card with live stages, lecture detail (Summary/Flagged/Transcript/Ask, audio bar, `?t=` deep links), Flagged page, Sources (documents table + add/delete, Insights) | `frontend/app/*`, `frontend/components/*`, `frontend/lib/*` |
 | 2026-11-09 | Phase 3: flagger (cue regex + LLM JSON check), lecture notes (parts + combine), `reprocess_lecture()`, `GET /api/flagged`, `GET /api/insights`; lecture detail uses exact moments | `backend/app/ingest/{flagger,lecture_notes,pipeline}.py`, `backend/app/api/{flagged,insights,lectures}.py` |
 | 2026-11-09 | Phase 2: LLM provider, retriever, reranker, priority, prompts, answerer, `/api/ask` (SSE), `/api/feedback`, eval runner + provisional set; 22 unit tests | `backend/app/{llm,rag,api}/*`, `backend/eval/*` |
+| 2026-11-10 | Live checks: launcher cold start 42 s (Ollama running, backend + app started, health green); startup recovery marks a stuck `processing` source failed; quiz end-to-end 5-6 questions in 17-19 s | `scripts/stop.ps1`, `app/rag/{prompts,study}.py`, `tests/test_rag.py` |
 | 2026-11-09 | Real-data ingest test: 19 BPDC PDFs (MATH F113 + PHY F111 handouts, PHY F110 lab handout + manual, 5 MOW slide decks, 1 MOW notes, 9 PYQs) uploaded via `/api/documents`; all `ready`, 488 chunks. Retrieval probe (16 questions, embed → `hybrid_search`): **15/16 expected doc in top 5**, 13 at rank 1. Miss: "When was the MATH F113 midsem / open book?" → PYQ headers outrank the handout | Supabase data only |
 | 2026-11-09 | `OLLAMA_URL` → `http://127.0.0.1:11434` (see bug below) | `backend/.env`, `.env.example`, `app/config.py`, `docs/Architecture.md` |
 | 2026-11-09 | Phase 1: prepare, pdf_loader, transcriber, chunker, embedder, pipeline, document + lecture APIs, 9 unit tests | `backend/app/ingest/*`, `backend/app/rag/embedder.py`, `backend/app/db.py`, `backend/app/api/{documents,lectures}.py` |
@@ -109,6 +110,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Bug | Cause | Fix | Status |
 | --- | --- | --- | --- | --- |
+| 2026-11-10 | Quiz search hit 8 s timeout even after textbook removal | 19.7k dead rows in `chunks`, autovacuum not run; exact-scan `hybrid_search` read them all | `vacuum (index_cleanup off, analyze) chunks` (full vacuum times out on free tier because HNSW cleanup is slow); cold search 6.5 s → 1.5 s, median ~1.0 s. Table still 305 MB on disk until `REINDEX` of `chunks_embedding_idx` (do with task 2.10) | Fixed |
 | 2026-11-10 | Large textbooks failed: Postgres 57014 statement timeout on chunk upsert | PostgREST `statement_timeout=8s`; 100-row HNSW inserts too slow above ~10k chunks | Batch 25 + retry | Fixed |
 | 2026-11-10 | Random 'Server disconnected' / HTTP 500 on uploads | Supabase drops idle HTTP/2 connections | Retry in `upsert_chunks`; other DB calls still unprotected | Partly fixed |
 | 2026-11-10 | PDFs > 50 MB after compression fail at Storage upload (400) | Free-tier 50 MB per-file limit | Not fixed: Introduction to Mechanics (58 MB), Maths Solutions Manual (63 MB) left out | Open |
@@ -117,7 +119,9 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 | 2026-11-10 | Quiz LaTeX broke (`\text` became a tab) | Model writes LaTeX in JSON strings without escaping backslashes | Escape backslash commands before `json.loads` | Fixed |
 | 2026-11-10 | Chunk upsert failed with Postgres 22P05 on some PDFs (reported by the testing-materials session) | NUL characters in PDF text | `clean_text()` strips C0 control characters from page and OCR text | Fixed (unit test) |
 | 2026-11-10 | `/calendar` prerender error: `new Date()` in a client component | `cacheComponents` | Page wrapped in `<Suspense>` | Fixed |
-| 2026-11-10 | Some AI-written MCQs have two correct options (e.g. P(A∩B)/P(B) and Bayes' formula) | Model limit | Every question shows its source; prompt asks for exactly one correct option | Open (known limit) |
+| 2026-11-10 | `CampusMind-stop.bat` left uvicorn running when it was started with `--reload` | Stop killed the reloader; its spawned worker kept port 8000 | `stop.ps1` also stops the listener's child processes | Fixed (live) |
+| 2026-11-10 | MCQ check (`mcq_is_sound`) kept questions with two correct options on gemma4 | Asked for a list of correct indexes; model stopped after the first | Model judges each option separately with a short reason; 3/3 live cases (two-correct, wrong key, sound) | Fixed |
+| 2026-11-10 | Some AI-written MCQs have two correct options (e.g. P(A∩B)/P(B) and Bayes' formula) | Model limit | Every question shows its source; per-option MCQ check (above) drops them | Mitigated |
 | 2026-11-09 | `/lectures/[id]` errored: `usePathname()` outside `<Suspense>` | `cacheComponents: true` (create-next-app default) requires Suspense for runtime hooks in the layout | Nav split into `NavBar` + Suspense-wrapped `ActiveNav` | Fixed |
 | 2026-11-09 | `/sources` page 618 px wide on a 375 px phone | Table min-content widened the mobile layout viewport despite `overflow-x-auto` | Hide secondary columns on phones | Fixed |
 | 2026-11-09 | Every question took ~50 s to first token | (1) Ollama 1-model limit swapped bge-m3/gemma; (2) warm-up loaded gemma with default 4096 ctx, real calls used 8192 → reload; (3) reranker on CPU (17 s) | 2-model Ollama, same options in warm-up, CUDA torch | Fixed: 2.2 s median |
@@ -135,6 +139,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 
 | Date | Commit | Correct (/15) | Refused (/3) | Flag recall | First-token time | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-10 | 0dd3da9 | 15/15 | 3/3 | — | 2.7 s median, 4.5 s max | 321 docs / 4,905 chunks (textbooks removed). Ranks slipped: math-compre-weight 10, phy-compre-date 9 (still in top 40, answered correctly) |
 | 2026-11-10 | p1 | 15/15 | 3/3 | — | 2.3 s median, 3.9 s max | Corpus now includes the testing session's bulk PDFs; + course code in the question selects that course |
 | 2026-11-10 | p1 (before fix) | 13/15 | 3/3 | — | 2.6 s median | Tables/LaTeX prompt; 2 PHY misses: handout out of the top 40 in the bigger corpus |
 | 2026-11-09 | phase-2 tuned | 15/15 | 3/3 | 2/2 (TEST lecture) | 2.2 s median, 2.6 s max | + TOP_K_RETRIEVE 40 (phy-quiz1 fixed) |
@@ -166,6 +171,7 @@ The project's long-term memory. **Read this first in every session.** Add to it 
 - Flagger (3.1): match cue phrases on word boundaries — "exam" must not match "example".
 - Tasks 1.2/1.3 checks were run on generated TEST files; re-check page numbers and transcript on the real D.1/D.2 files.
 - Changing `EMBED_MODEL` → delete all `chunks` rows and re-embed every source.
+- After deleting many chunks, run `vacuum (index_cleanup off, analyze) chunks;` (plain VACUUM times out on the free tier); search exact-scans dead rows otherwise.
 - Supabase free projects pause after 1 week idle → open the dashboard before each round.
 - Pre-process all demo files before going on stage; never transcribe live.
 - Wi-Fi backup: phone hotspot; or local Supabase (`supabase start`) with the same migrations and a `.env` URL change.
